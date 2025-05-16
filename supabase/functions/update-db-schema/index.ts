@@ -31,10 +31,21 @@ serve(async (req) => {
     const { error: automationsError } = await supabaseClient.rpc('exec_sql', { sql_query: updateAutomationsTableSQL });
     if (automationsError) throw automationsError;
     
+    // Check if support_tickets and related tables exist and create them if they don't
+    const checkSupportTablesSQL = `
+      SELECT 
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'support_tickets') as support_tickets_exists,
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ticket_responses') as ticket_responses_exists,
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'blog_translations') as blog_translations_exists
+    `;
+    
+    const { data: tablesCheck, error: tablesCheckError } = await supabaseClient.rpc('exec_sql', { sql_query: checkSupportTablesSQL });
+    if (tablesCheckError) throw tablesCheckError;
+    
     // Check if other migrations need to be run here...
     
     return new Response(
-      JSON.stringify({ success: true, message: "Database schema updated successfully" }),
+      JSON.stringify({ success: true, message: "Database schema updated successfully", tablesCheck }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -16,28 +16,31 @@ import {
 } from "@/components/ui/card"
 
 import { supabase } from '@/integrations/supabase/client';
+import { SupportTicket, TicketResponse } from '@/types/supabase';
 
-interface TicketResponse {
-  id: string;
-  ticket_id: string;
-  message: string;
-  created_by: string;
-  is_admin: boolean;
-  created_at: string;
+interface TicketDetailProps {
+  ticket?: SupportTicket | null;
+  responses?: TicketResponse[];
+  automations?: any[];
+  user?: any;
+  onStatusChange?: (status: 'open' | 'in_progress' | 'resolved' | 'closed') => void;
+  onResponseSubmit?: () => void;
+  fetchTicketResponses?: (ticketId: string) => void;
 }
 
-const TicketDetail = () => {
+const TicketDetail: React.FC<TicketDetailProps> = ({ 
+  ticket, 
+  responses = [], 
+  automations = [],
+  user,
+  onStatusChange,
+  onResponseSubmit,
+  fetchTicketResponses
+}) => {
   const { id: ticketId } = useParams<{ id: string }>();
-  const [ticket, setTicket] = useState<any>(null);
-  const [responses, setResponses] = useState<TicketResponse[]>([]);
   const [responseMessage, setResponseMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const { auth } = useAuth();
-
-  useEffect(() => {
-    fetchTicket();
-    fetchResponses();
-  }, [ticketId]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user: authUser } = useAuth();
 
   const fetchTicket = async () => {
     setIsLoading(true);
@@ -51,13 +54,14 @@ const TicketDetail = () => {
       if (error) {
         toast.error('Failed to load ticket');
         console.error('Error fetching ticket:', error);
-        return;
+        return null;
       }
 
-      setTicket(data);
+      return data as SupportTicket;
     } catch (err) {
       console.error('Error in fetchTicket:', err);
       toast.error('Failed to load ticket');
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -74,29 +78,31 @@ const TicketDetail = () => {
       if (error) {
         toast.error('Failed to load responses');
         console.error('Error fetching responses:', error);
-        return;
+        return [];
       }
 
-      setResponses(data);
+      return data as TicketResponse[];
     } catch (err) {
       console.error('Error in fetchResponses:', err);
       toast.error('Failed to load responses');
+      return [];
     }
   };
 
   // When sending a new response
   const sendResponse = async (message: string) => {
+    if (!ticket) return;
+    
     try {
-      const user = auth.user();
-      if (!user) {
+      if (!authUser) {
         toast.error('You must be logged in to send a response');
         return;
       }
 
       const responseData = {
-        ticket_id: ticketId,
+        ticket_id: ticket.id,
         message,
-        created_by: user.id,
+        created_by: authUser.id,
         is_admin: true,
         created_at: new Date().toISOString(),
       };
@@ -113,7 +119,12 @@ const TicketDetail = () => {
 
       setResponseMessage('');
       toast.success('Response sent successfully');
-      fetchResponses();
+      
+      if (onResponseSubmit) {
+        onResponseSubmit();
+      } else if (fetchTicketResponses) {
+        fetchTicketResponses(ticket.id);
+      }
     } catch (err) {
       console.error('Error in sendResponse:', err);
       toast.error('Failed to send response');
@@ -122,11 +133,18 @@ const TicketDetail = () => {
 
   // Function to close the ticket
   const closeTicket = async () => {
+    if (!ticket) return;
+    
     try {
+      if (onStatusChange) {
+        onStatusChange('closed');
+        return;
+      }
+      
       const { error } = await supabase
         .from('support_tickets')
         .update({ status: 'closed' })
-        .eq('id', ticketId);
+        .eq('id', ticket.id);
 
       if (error) {
         toast.error('Failed to close ticket');
@@ -135,7 +153,6 @@ const TicketDetail = () => {
       }
 
       toast.success('Ticket closed successfully');
-      fetchTicket(); // Refresh ticket details
     } catch (err) {
       console.error('Error in closeTicket:', err);
       toast.error('Failed to close ticket');
@@ -170,27 +187,33 @@ const TicketDetail = () => {
 
       <div className="mt-6">
         <h3 className="text-xl font-semibold mb-4">Responses</h3>
-        {responses.map((response) => (
-          <Card key={response.id} className="mb-4">
-            <CardHeader className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src={`https://avatar.vercel.sh/${response.created_by}.png`} />
-                <AvatarFallback>
-                  {response.is_admin ? 'Admin' : 'User'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle>{response.is_admin ? 'Admin' : 'User'}</CardTitle>
-                <CardDescription>
-                  {new Date(response.created_at).toLocaleString()}
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p>{response.message}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {responses && responses.length > 0 ? (
+          responses.map((response) => (
+            <Card key={response.id} className="mb-4">
+              <CardHeader className="flex items-center space-x-4">
+                <Avatar>
+                  <AvatarImage src={`https://avatar.vercel.sh/${response.created_by}.png`} />
+                  <AvatarFallback>
+                    {response.is_admin ? 'Admin' : 'User'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle>{response.is_admin ? 'Admin' : 'User'}</CardTitle>
+                  <CardDescription>
+                    {new Date(response.created_at).toLocaleString()}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p>{response.message}</p>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            No responses yet
+          </div>
+        )}
       </div>
 
       <div className="mt-6">
