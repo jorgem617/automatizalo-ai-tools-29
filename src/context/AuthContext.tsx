@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +8,8 @@ interface AuthContextProps {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   loading: boolean;
+  isAuthenticated: boolean;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -14,6 +17,8 @@ const AuthContext = createContext<AuthContextProps>({
   signIn: async () => {},
   signOut: async () => {},
   loading: false,
+  isAuthenticated: false,
+  logout: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -73,7 +78,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const value: AuthContextProps = { user, signIn, signOut, loading };
+  // Add logout as an alias for signOut for consistency with existing code
+  const logout = signOut;
+
+  const isAuthenticated = !!user;
+
+  const value: AuthContextProps = { 
+    user, 
+    signIn, 
+    signOut, 
+    loading,
+    isAuthenticated,
+    logout
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

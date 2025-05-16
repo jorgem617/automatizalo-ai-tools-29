@@ -1,18 +1,31 @@
 
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { escapeSql, runQuery } from '@/components/admin/adminActions';
-import { ClientIntegrationSetting, ClientAutomation, User, isErrorResponse } from '@/types/supabase';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+// Define the missing ClientIntegrationSetting type
+export interface ClientIntegrationSetting {
+  id?: string;
+  client_automation_id: string;
+  integration_type: 'webhook' | 'form' | 'table' | 'custom_prompt';
+  test_url?: string;
+  production_url?: string;
+  integration_code?: string;
+  prompt_text?: string;
+  status: 'pending' | 'configured' | 'active';
+  created_at?: string;
+  updated_at?: string;
+  last_updated_by?: string;
+}
 
 export interface ClientAutomationWithDetails {
   id: string;
   client_id: string;
   automation_id: string;
-  purchase_date: string;
   status: 'active' | 'canceled' | 'pending';
-  next_billing_date: string;
   setup_status: 'pending' | 'in_progress' | 'completed';
-  client?: User;
+  purchase_date: string;
+  next_billing_date: string;
+  client?: { email: string; id: string };
   automation?: {
     id: string;
     title: string;
@@ -24,76 +37,73 @@ export interface ClientAutomationWithDetails {
   };
 }
 
-/**
- * Fetches client automation details
- */
-export const fetchClientAutomations = async () => {
-  try {
-    console.log("Fetching client automations...");
-    
-    // First fetch client automations with automation details
-    const { data: automations, error: automationsError } = await supabase
-      .from('client_automations')
-      .select(`
-        *,
-        automation:automations(*)
-      `);
-
-    if (automationsError) {
-      throw automationsError;
-    }
-
-    // For each client automation, fetch the associated user information separately
-    const clientAutomationsWithDetails = await Promise.all((automations || []).map(async (item: any) => {
-      // Get client info from users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email')
-        .eq('id', item.client_id)
-        .single();
-      
-      // Even if user fetch fails, continue with default values
-      const clientData = userError ? 
-        { id: item.client_id, email: 'Unknown email' } : 
-        userData;
-      
-      return {
-        id: item.id,
-        client_id: item.client_id,
-        automation_id: item.automation_id,
-        purchase_date: item.purchase_date,
-        status: item.status,
-        next_billing_date: item.next_billing_date,
-        setup_status: item.setup_status,
-        client: clientData,
-        automation: item.automation
-      } as ClientAutomationWithDetails;
-    }));
-    
-    console.log(`Successfully fetched ${clientAutomationsWithDetails.length} client automations`);
-    return clientAutomationsWithDetails;
-  } catch (error) {
-    console.error('Failed to fetch client automations:', error);
-    toast.error('Failed to load client automation data');
-    return [];
-  }
-};
-
-/**
- * Fetches integration settings for a specific client automation
- */
-export const fetchClientIntegrationSettings = async (clientAutomationId: string) => {
-  if (!clientAutomationId) return [];
-  
+// Function to fetch client integration settings
+export const fetchClientIntegrationSettings = async (clientAutomationId: string): Promise<ClientIntegrationSetting[]> => {
   try {
     const { data, error } = await supabase
       .from('client_integration_settings')
       .select('*')
-      .eq('client_automation_id', clientAutomationId)
-      .order('integration_type');
-
-    if (error) {
-      throw error;
+      .eq('client_automation_id', clientAutomationId);
+      
+    if (error) throw error;
+    
+    // If no settings exist, create default ones based on automation capabilities
+    if (data.length === 0) {
+      const { data: automationData, error: automationError } = await supabase
+        .from('client_automations')
+        .select('automation:automation_id(*)')
+        .eq('id', clientAutomationId)
+        .single();
+        
+      if (automationError) throw automationError;
+      
+      const automation = automationData.automation;
+      const settingsToCreate: Partial<ClientIntegrationSetting>[] = [];
+      
+      if (automation.has_webhook) {
+        settingsToCreate.push({
+          client_automation_id: clientAutomationId,
+          integration_type: 'webhook',
+          status: 'pending'
+        });
+      }
+      
+      if (automation.has_custom_prompt) {
+        settingsToCreate.push({
+          client_automation_id: clientAutomationId,
+          integration_type: 'custom_prompt',
+          status: 'pending'
+        });
+      }
+      
+      if (automation.has_form_integration) {
+        settingsToCreate.push({
+          client_automation_id: clientAutomationId,
+          integration_type: 'form',
+          status: 'pending'
+        });
+      }
+      
+      if (automation.has_table_integration) {
+        settingsToCreate.push({
+          client_automation_id: clientAutomationId,
+          integration_type: 'table',
+          status: 'pending'
+        });
+      }
+      
+      if (settingsToCreate.length > 0) {
+        const { data: insertedData, error: insertError } = await supabase
+          .from('client_integration_settings')
+          .insert(settingsToCreate)
+          .select();
+          
+        if (insertError) throw insertError;
+        
+        return insertedData as ClientIntegrationSetting[];
+      }
+      
+      return [];
     }
     
     return data as ClientIntegrationSetting[];
@@ -104,135 +114,62 @@ export const fetchClientIntegrationSettings = async (clientAutomationId: string)
   }
 };
 
-/**
- * Saves an integration setting (creates or updates)
- */
-export const saveClientIntegrationSetting = async (data: ClientIntegrationSetting) => {
-  if (!data || !data.client_automation_id) return null;
-  
+// Function to save client integration setting
+export const saveClientIntegrationSetting = async (setting: ClientIntegrationSetting): Promise<{ success: boolean }> => {
   try {
-    let result;
+    const { id, ...updateData } = setting;
     
-    if (data.id) {
-      // Update existing setting
-      const { data: updatedData, error } = await supabase
+    // Update existing setting or create new one
+    if (id) {
+      const { error } = await supabase
         .from('client_integration_settings')
         .update({
-          test_url: data.test_url,
-          production_url: data.production_url,
-          integration_code: data.integration_code,
-          prompt_text: data.prompt_text,
-          status: data.status,
-          last_updated_by: (await supabase.auth.getUser()).data.user?.id
+          ...updateData,
+          updated_at: new Date().toISOString()
         })
-        .eq('id', data.id)
-        .select();
-      
+        .eq('id', id);
+        
       if (error) throw error;
-      result = updatedData?.[0];
     } else {
-      // Create new setting
-      const { data: newData, error } = await supabase
+      const { error } = await supabase
         .from('client_integration_settings')
         .insert({
-          client_automation_id: data.client_automation_id,
-          integration_type: data.integration_type,
-          test_url: data.test_url,
-          production_url: data.production_url,
-          integration_code: data.integration_code,
-          prompt_text: data.prompt_text,
-          status: data.status,
-          last_updated_by: (await supabase.auth.getUser()).data.user?.id
-        })
-        .select();
-      
+          ...updateData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        
       if (error) throw error;
-      result = newData?.[0];
     }
     
-    return { success: true, data: result };
+    return { success: true };
   } catch (error) {
-    console.error(`Failed to save ${data.integration_type} setting:`, error);
-    toast.error(`Failed to save ${data.integration_type} setting`);
-    return { success: false, error };
+    console.error('Failed to save integration setting:', error);
+    toast.error('Failed to save integration settings');
+    return { success: false };
   }
 };
 
-/**
- * Updates the setup status of a client automation
- */
-export const updateClientAutomationStatus = async (id: string, setupStatus: 'pending' | 'in_progress' | 'completed') => {
+// Function to update client automation status
+export const updateClientAutomationStatus = async (
+  clientAutomationId: string,
+  status: 'pending' | 'in_progress' | 'completed'
+): Promise<{ success: boolean }> => {
   try {
     const { error } = await supabase
       .from('client_automations')
-      .update({ 
-        setup_status: setupStatus,
+      .update({
+        setup_status: status,
+        updated_at: new Date().toISOString()
       })
-      .eq('id', id);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Failed to update client automation status:', error);
-    toast.error('Failed to update automation status');
-    return false;
-  }
-};
-
-/**
- * Creates empty integration settings for a client automation based on the automation's features
- */
-export const initializeClientIntegrationSettings = async (clientAutomation: ClientAutomationWithDetails) => {
-  if (!clientAutomation?.id || !clientAutomation.automation) return false;
-  
-  const settingsToCreate = [];
-  const { has_webhook, has_custom_prompt, has_form_integration, has_table_integration } = clientAutomation.automation;
-  
-  if (has_webhook) {
-    settingsToCreate.push({
-      client_automation_id: clientAutomation.id,
-      integration_type: 'webhook' as const,
-      status: 'pending' as const
-    });
-  }
-  
-  if (has_custom_prompt) {
-    settingsToCreate.push({
-      client_automation_id: clientAutomation.id,
-      integration_type: 'custom_prompt' as const,
-      status: 'pending' as const
-    });
-  }
-  
-  if (has_form_integration) {
-    settingsToCreate.push({
-      client_automation_id: clientAutomation.id,
-      integration_type: 'form' as const,
-      status: 'pending' as const
-    });
-  }
-  
-  if (has_table_integration) {
-    settingsToCreate.push({
-      client_automation_id: clientAutomation.id,
-      integration_type: 'table' as const,
-      status: 'pending' as const
-    });
-  }
-  
-  try {
-    if (settingsToCreate.length > 0) {
-      const { error } = await supabase
-        .from('client_integration_settings')
-        .insert(settingsToCreate as any);
+      .eq('id', clientAutomationId);
       
-      if (error) throw error;
-    }
+    if (error) throw error;
     
-    return true;
+    return { success: true };
   } catch (error) {
-    console.error('Failed to initialize integration settings:', error);
-    toast.error('Failed to initialize integration settings');
-    return false;
+    console.error('Failed to update automation status:', error);
+    toast.error('Failed to update automation status');
+    return { success: false };
   }
 };

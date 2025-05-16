@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,10 +15,7 @@ const ClientLogin = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    isAuthenticated,
-    user
-  } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
 
   // Check for redirect parameter
@@ -72,7 +70,7 @@ const ClientLogin = () => {
         }
 
         // If user doesn't exist or doesn't have admin role, update it
-        if (!userData || userData.role !== 'admin') {
+        if (!userData || !userData.role || userData.role !== 'admin') {
           console.log('Setting admin role for main account');
           const {
             error: updateError
@@ -128,7 +126,7 @@ const ClientLogin = () => {
       console.log('User data:', userData);
 
       // Redirect based on role
-      if (userData?.role === 'admin') {
+      if (userData && userData.role === 'admin') {
         if (redirectTo) {
           navigate(redirectTo);
         } else {
