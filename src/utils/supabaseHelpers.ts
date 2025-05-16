@@ -25,3 +25,21 @@ export function safeCastArray<T>(dataArray: any[]): T[] {
     return safeCast<T>(item);
   }).filter((item): item is T => item !== null);
 }
+
+/**
+ * Type guard to check if an object is a Supabase error response
+ */
+export function isSupabaseError(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
+}
+
+/**
+ * Cast Supabase response to proper types, handling error objects
+ * Useful for nested relationships that might be error objects
+ */
+export function castRelation<T>(relation: any, fallbackValue: T): T {
+  if (isSupabaseError(relation)) {
+    return fallbackValue;
+  }
+  return relation as T;
+}

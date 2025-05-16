@@ -1,105 +1,80 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { castRelation } from '@/utils/supabaseHelpers';
 
-// Cache admin status to avoid repeated checks
-const adminStatusCache = new Map<string, boolean>();
+interface AdminVerificationResult {
+  isAdmin: boolean;
+  isVerifying: boolean;
+  errorMessage: string | null;
+}
 
-export function useAdminVerification() {
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { user } = useAuth();
-  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+/**
+ * Hook to verify if the current user has admin privileges
+ * Used in admin-only pages to prevent unauthorized access
+ */
+export const useAdminVerification = (): AdminVerificationResult => {
+  const { user, isAuthenticated } = useAuth();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Clear any existing timeout to prevent race conditions
-    if (checkTimeoutRef.current) {
-      clearTimeout(checkTimeoutRef.current);
+    if (!user || !isAuthenticated) {
+      setIsVerifying(false);
+      setIsAdmin(false);
+      setErrorMessage('User not authenticated');
+      return;
     }
-    
-    // Cancel any in-flight requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    // Create new abort controller for this request
-    abortControllerRef.current = new AbortController();
 
     const checkAdminStatus = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setIsVerifying(false);
-        return;
-      }
+      setIsVerifying(true);
+      setErrorMessage(null);
 
       try {
-        // Special case for the main admin account
+        // Special case for the main admin email
         if (user.email === 'contact@automatizalo.co') {
-          console.log("Main admin account detected, bypassing check");
           setIsAdmin(true);
-          setIsVerifying(false);
-          adminStatusCache.set(user.id, true);
-          return;
-        }
-        
-        // Check cache first for better performance
-        if (adminStatusCache.has(user.id)) {
-          const cachedStatus = adminStatusCache.get(user.id) || false;
-          console.log("Using cached admin status:", cachedStatus);
-          setIsAdmin(cachedStatus);
           setIsVerifying(false);
           return;
         }
 
-        console.log("Checking admin status for:", user.email);
-        const { data: isAdminUser, error } = await supabase.rpc('is_admin', { user_uid: user.id });
-        
+        // Check if the user has the admin role in the database
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
         if (error) {
           console.error('Error checking admin status:', error);
+          setErrorMessage('Failed to verify admin permissions');
           setIsAdmin(false);
-        } else {
-          const adminStatus = !!isAdminUser;
-          console.log("Admin status result:", adminStatus);
-          // Cache the result
-          adminStatusCache.set(user.id, adminStatus);
-          setIsAdmin(adminStatus);
+          return;
         }
-      } catch (error) {
-        console.error('Error in admin verification:', error);
+
+        // Get the role or default to 'client'
+        const userRole = data && !('error' in data) && data.role ? data.role : 'client';
+        
+        if (userRole === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+          setErrorMessage('User does not have admin permissions');
+        }
+      } catch (error: any) {
+        console.error('Admin verification error:', error);
         setIsAdmin(false);
+        setErrorMessage(error.message || 'Failed to verify admin permissions');
       } finally {
         setIsVerifying(false);
       }
     };
 
-    // Use a small timeout to avoid UI flashing when navigating between admin pages
-    // and to prevent multiple simultaneous checks
-    checkTimeoutRef.current = setTimeout(checkAdminStatus, 100);
-    
-    return () => {
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [user]);
+    checkAdminStatus();
+  }, [user, isAuthenticated]);
 
-  // Set a timeout to force isVerifying to false after a reasonable time
-  // to prevent infinite loading states
-  useEffect(() => {
-    const forceTimeout = setTimeout(() => {
-      if (isVerifying) {
-        console.warn("Admin verification taking too long, forcing completion");
-        setIsVerifying(false);
-      }
-    }, 3000); // 3 second timeout
-    
-    return () => clearTimeout(forceTimeout);
-  }, [isVerifying]);
-
-  return { isAdmin, isVerifying };
-}
+  return { isAdmin, isVerifying, errorMessage };
+};

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -16,7 +15,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
-  const { login, isAuthenticated, user } = useAuth();
+  const { signIn, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useTheme();
@@ -51,7 +50,7 @@ const Login = () => {
     try {
       console.log("Attempting login with email/password");
       
-      const { error: loginError } = await login(email, password);
+      const { error: loginError } = await signIn(email, password);
       
       if (loginError) {
         setError(loginError.message || "Invalid login credentials. Please try again.");

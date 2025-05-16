@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { ClientAutomation } from '@/types/automation';
+import { castRelation } from '@/utils/supabaseHelpers';
 
 const MyAutomationsView: React.FC = () => {
   const { user } = useAuth();
@@ -32,7 +32,28 @@ const MyAutomationsView: React.FC = () => {
         .eq('status', 'active'); // Only get active subscriptions
 
       if (error) throw error;
-      return data as ClientAutomation[];
+      
+      // Process the data to handle potential relation errors
+      return data.map(item => {
+        // Handle the automation relation which might be an error
+        const defaultAutomation = {
+          id: item.automation_id,
+          title: 'Unknown Automation',
+          description: '',
+          has_webhook: false,
+          has_custom_prompt: false,
+          has_form_integration: false,
+          has_table_integration: false,
+          installation_price: 0,
+          monthly_price: 0,
+          active: true
+        };
+        
+        return {
+          ...item,
+          automation: castRelation(item.automation, defaultAutomation)
+        } as ClientAutomation;
+      });
     },
     enabled: !!user,
   });

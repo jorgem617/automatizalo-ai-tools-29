@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { castRelation, safeCastArray } from "@/utils/supabaseHelpers";
 
 // Define the missing ClientIntegrationSetting type
 export interface ClientIntegrationSetting {
@@ -37,6 +38,49 @@ export interface ClientAutomationWithDetails {
   };
 }
 
+// Function to fetch client automations for the manager
+export const fetchClientAutomations = async (): Promise<ClientAutomationWithDetails[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('client_automations')
+      .select(`
+        *,
+        client:client_id(id, email),
+        automation:automation_id(*)
+      `)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    
+    // Process the data to handle potential relation errors
+    return data.map(item => {
+      // Handle the automation relation which might be an error
+      const defaultAutomation = {
+        id: item.automation_id,
+        title: 'Unknown Automation',
+        description: '',
+        has_webhook: false,
+        has_custom_prompt: false,
+        has_form_integration: false,
+        has_table_integration: false,
+        installation_price: 0,
+        monthly_price: 0,
+        active: true
+      };
+      
+      return {
+        ...item,
+        client: item.client || { id: item.client_id, email: 'Unknown Client' },
+        automation: castRelation(item.automation, defaultAutomation)
+      } as ClientAutomationWithDetails;
+    });
+  } catch (error) {
+    console.error('Failed to fetch client automations:', error);
+    toast.error('Failed to load client automations');
+    return [];
+  }
+};
+
 // Function to fetch client integration settings
 export const fetchClientIntegrationSettings = async (clientAutomationId: string): Promise<ClientIntegrationSetting[]> => {
   try {
@@ -49,67 +93,108 @@ export const fetchClientIntegrationSettings = async (clientAutomationId: string)
     
     // If no settings exist, create default ones based on automation capabilities
     if (data.length === 0) {
-      const { data: automationData, error: automationError } = await supabase
-        .from('client_automations')
-        .select('automation:automation_id(*)')
-        .eq('id', clientAutomationId)
-        .single();
-        
-      if (automationError) throw automationError;
-      
-      const automation = automationData.automation;
-      const settingsToCreate: Partial<ClientIntegrationSetting>[] = [];
-      
-      if (automation.has_webhook) {
-        settingsToCreate.push({
-          client_automation_id: clientAutomationId,
-          integration_type: 'webhook',
-          status: 'pending'
-        });
-      }
-      
-      if (automation.has_custom_prompt) {
-        settingsToCreate.push({
-          client_automation_id: clientAutomationId,
-          integration_type: 'custom_prompt',
-          status: 'pending'
-        });
-      }
-      
-      if (automation.has_form_integration) {
-        settingsToCreate.push({
-          client_automation_id: clientAutomationId,
-          integration_type: 'form',
-          status: 'pending'
-        });
-      }
-      
-      if (automation.has_table_integration) {
-        settingsToCreate.push({
-          client_automation_id: clientAutomationId,
-          integration_type: 'table',
-          status: 'pending'
-        });
-      }
-      
-      if (settingsToCreate.length > 0) {
-        const { data: insertedData, error: insertError } = await supabase
-          .from('client_integration_settings')
-          .insert(settingsToCreate)
-          .select();
-          
-        if (insertError) throw insertError;
-        
-        return insertedData as ClientIntegrationSetting[];
-      }
-      
-      return [];
+      return await initializeClientIntegrationSettings({
+        id: clientAutomationId,
+        automation_id: '', // Will be populated from the query below
+        client_id: '',
+        status: 'active',
+        setup_status: 'pending',
+        purchase_date: '',
+        next_billing_date: ''
+      });
     }
     
     return data as ClientIntegrationSetting[];
   } catch (error) {
     console.error('Failed to fetch integration settings:', error);
     toast.error('Failed to load integration settings');
+    return [];
+  }
+};
+
+// Initialize client integration settings based on automation capabilities
+export const initializeClientIntegrationSettings = async (
+  clientAutomation: Partial<ClientAutomationWithDetails>
+): Promise<ClientIntegrationSetting[]> => {
+  try {
+    // First, get the automation details if not already provided
+    let automation = clientAutomation.automation;
+    
+    if (!automation) {
+      const { data: automationData, error: automationError } = await supabase
+        .from('client_automations')
+        .select('automation:automation_id(*)')
+        .eq('id', clientAutomation.id)
+        .single();
+        
+      if (automationError) throw automationError;
+      
+      // Handle potential error in the relation
+      const defaultAutomation = {
+        id: '',
+        title: 'Unknown Automation',
+        description: '',
+        has_webhook: false,
+        has_custom_prompt: false,
+        has_form_integration: false,
+        has_table_integration: false,
+        installation_price: 0,
+        monthly_price: 0,
+        active: true
+      };
+      
+      automation = castRelation(automationData.automation, defaultAutomation);
+    }
+    
+    const settingsToCreate: ClientIntegrationSetting[] = [];
+    
+    if (automation.has_webhook) {
+      settingsToCreate.push({
+        client_automation_id: clientAutomation.id!,
+        integration_type: 'webhook',
+        status: 'pending'
+      });
+    }
+    
+    if (automation.has_custom_prompt) {
+      settingsToCreate.push({
+        client_automation_id: clientAutomation.id!,
+        integration_type: 'custom_prompt',
+        status: 'pending'
+      });
+    }
+    
+    if (automation.has_form_integration) {
+      settingsToCreate.push({
+        client_automation_id: clientAutomation.id!,
+        integration_type: 'form',
+        status: 'pending'
+      });
+    }
+    
+    if (automation.has_table_integration) {
+      settingsToCreate.push({
+        client_automation_id: clientAutomation.id!,
+        integration_type: 'table',
+        status: 'pending'
+      });
+    }
+    
+    if (settingsToCreate.length > 0) {
+      const { data: insertedData, error: insertError } = await supabase
+        .from('client_integration_settings')
+        .insert(settingsToCreate)
+        .select();
+        
+      if (insertError) throw insertError;
+      
+      return insertedData as ClientIntegrationSetting[];
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Failed to initialize integration settings:', error);
+    toast.error('Failed to initialize integration settings');
     return [];
   }
 };

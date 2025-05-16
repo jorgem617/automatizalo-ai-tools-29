@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { runQuery } from '@/components/admin/adminActions';
 
 const Unsubscribe = () => {
   const [email, setEmail] = useState('');
@@ -21,11 +22,10 @@ const Unsubscribe = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if the email exists in the subscription list
-      const { data: existingSubscriptions, error: checkError } = await supabase
-        .from('newsletter_subscriptions')
-        .select('id')
-        .eq('email', email) // Fixed: removed 'as any' cast that was causing the issue
+      // Use runQuery since newsletter_subscriptions may not be in the generated types
+      const { data: existingSubscriptions, error: checkError } = await runQuery(
+        `SELECT id FROM newsletter_subscriptions WHERE email = '${email.replace(/'/g, "''")}'`
+      );
       
       if (checkError) {
         throw checkError;
@@ -43,10 +43,9 @@ const Unsubscribe = () => {
       }
       
       // Delete the subscription
-      const { error: deleteError } = await supabase
-        .from('newsletter_subscriptions')
-        .delete()
-        .eq('email', email) // Fixed: removed 'as any' cast that was causing the issue
+      const { error: deleteError } = await runQuery(
+        `DELETE FROM newsletter_subscriptions WHERE email = '${email.replace(/'/g, "''")}'`
+      );
       
       if (deleteError) {
         throw deleteError;

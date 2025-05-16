@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { castRelation } from '@/utils/supabaseHelpers';
 
 const ClientLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -63,14 +64,18 @@ const ClientLogin = () => {
         const {
           data: userData,
           error: fetchError
-        } = await supabase.from('users').select('role').eq('id', data.user.id).single();
+        } = await supabase.from('users').select('*').eq('id', data.user.id).single();
         console.log('User data for admin:', userData);
+        
         if (fetchError) {
           console.error('Error fetching user role:', fetchError);
         }
 
+        // Default role if we can't access it
+        const userRole = userData && !('error' in userData) && userData.role ? userData.role : 'client';
+
         // If user doesn't exist or doesn't have admin role, update it
-        if (!userData || !userData.role || userData.role !== 'admin') {
+        if (!userData || !userRole || userRole !== 'admin') {
           console.log('Setting admin role for main account');
           const {
             error: updateError
@@ -100,7 +105,8 @@ const ClientLogin = () => {
       const {
         data: userData,
         error: userError
-      } = await supabase.from('users').select('role').eq('id', data.user.id).single();
+      } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+      
       if (userError) {
         console.error('Error fetching user role:', userError);
 
@@ -123,10 +129,14 @@ const ClientLogin = () => {
         toast.success('Successfully logged in');
         return;
       }
-      console.log('User data:', userData);
+      
+      // Get the role or default to 'client'
+      const userRole = userData && !('error' in userData) && userData.role ? userData.role : 'client';
+      
+      console.log('User role:', userRole);
 
       // Redirect based on role
-      if (userData && userData.role === 'admin') {
+      if (userRole === 'admin') {
         if (redirectTo) {
           navigate(redirectTo);
         } else {

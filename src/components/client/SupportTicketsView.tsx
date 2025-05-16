@@ -7,6 +7,7 @@ import { SupportTicket, ClientAutomation } from '@/types/automation';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
 import TicketCard from './ticket/TicketCard';
+import { castRelation } from '@/utils/supabaseHelpers';
 
 const SupportTicketsView = () => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -62,18 +63,27 @@ const SupportTicketsView = () => {
         
       if (error) throw error;
       
-      // Properly type the data from the database
-      const typedData = (data || []).map(item => ({
-        ...item,
-        id: item.id,
-        client_id: item.client_id,
-        automation_id: item.automation_id,
-        purchase_date: item.purchase_date,
-        status: item.status as 'active' | 'canceled' | 'pending',
-        next_billing_date: item.next_billing_date,
-        setup_status: item.setup_status as 'pending' | 'in_progress' | 'completed',
-        automation: item.automation
-      }) as ClientAutomation);
+      // Process the data to handle potential relation errors
+      const typedData = data.map(item => {
+        // Handle the automation relation which might be an error
+        const defaultAutomation = {
+          id: item.automation_id,
+          title: 'Unknown Automation',
+          description: '',
+          has_webhook: false,
+          has_custom_prompt: false,
+          has_form_integration: false,
+          has_table_integration: false,
+          installation_price: 0,
+          monthly_price: 0,
+          active: true
+        };
+        
+        return {
+          ...item,
+          automation: castRelation(item.automation, defaultAutomation)
+        } as ClientAutomation;
+      });
       
       setAutomations(typedData);
     } catch (error) {

@@ -5,20 +5,22 @@ import { useNavigate } from 'react-router-dom';
 
 interface AuthContextProps {
   user: any | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{error?: any}>;
   signOut: () => Promise<void>;
   loading: boolean;
   isAuthenticated: boolean;
   logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{error?: any}>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
   user: null,
-  signIn: async () => {},
+  signIn: async () => ({}),
   signOut: async () => {},
   loading: false,
   isAuthenticated: false,
   logout: async () => {},
+  login: async () => ({})
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -44,7 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -54,9 +56,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       navigate('/client-portal');
+      return { data };
     } catch (error: any) {
       console.error('Error signing in:', error);
       alert(error.message);
+      return { error };
     } finally {
       setLoading(false);
     }
@@ -78,6 +82,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Add login as an alias for signIn for consistency with existing code
+  const login = signIn;
+
   // Add logout as an alias for signOut for consistency with existing code
   const logout = signOut;
 
@@ -89,7 +96,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signOut, 
     loading,
     isAuthenticated,
-    logout
+    logout,
+    login
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
