@@ -32,7 +32,7 @@ export const runQuery = async <T = any>(query: string, values?: any[]) => {
     // Use any type here since the exec_sql function might not be defined in the types file
     const { data, error } = await supabase.rpc('exec_sql', { 
       sql_query: query 
-    }) as { data: any, error: any };
+    });
     
     if (error) {
       console.error("Error executing query:", error);

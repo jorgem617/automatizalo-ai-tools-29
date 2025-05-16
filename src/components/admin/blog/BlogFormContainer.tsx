@@ -107,24 +107,26 @@ export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({
   // Import from blogService to avoid circular dependencies
   const saveBlogTranslations = async (blogId: string, translations: any) => {
     try {
+      const translationsToUpsert: BlogTranslation[] = [
+        {
+          blog_post_id: blogId,
+          language: 'fr',
+          title: translations.fr.title,
+          excerpt: translations.fr.excerpt || '',
+          content: translations.fr.content
+        },
+        {
+          blog_post_id: blogId,
+          language: 'es',
+          title: translations.es.title,
+          excerpt: translations.es.excerpt || '',
+          content: translations.es.content
+        }
+      ];
+
       const { data, error } = await supabase
         .from('blog_translations')
-        .upsert([
-          {
-            blog_post_id: blogId,
-            language: 'fr',
-            title: translations.fr.title,
-            excerpt: translations.fr.excerpt || '',
-            content: translations.fr.content
-          },
-          {
-            blog_post_id: blogId,
-            language: 'es',
-            title: translations.es.title,
-            excerpt: translations.es.excerpt || '',
-            content: translations.es.content
-          }
-        ] as BlogTranslation[]) as any;
+        .upsert(translationsToUpsert);
 
       if (error) throw error;
       return data;

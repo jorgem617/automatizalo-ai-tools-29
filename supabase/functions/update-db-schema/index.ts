@@ -6,7 +6,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 const checkTableExistsSQL = await Deno.readTextFile('./sql/check_table_exists.sql');
 
 // Read the SQL migration files
-const updateAutomationsTableSQL = await Deno.readTextFile('./sql/update_automations_table.sql');
+const updateAutomationsTableSQL = await Deno.readTextFile('../_shared/sql/update_automations_table.sql');
 
 serve(async (req) => {
   // Handle CORS

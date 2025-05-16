@@ -4,7 +4,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import EditableText from '@/components/admin/EditableText';
-import { useContactInfo, ContactInfo } from '@/stores/contactInfoStore';
+import { useContactInfo } from '@/stores/contactInfoStore';
 import FooterWhatsAppButton from './FooterWhatsAppButton';
 import ContactInfoItem from './ContactInfoItem';
 
@@ -15,7 +15,7 @@ const ContactSection = () => {
   const { contactInfo, updateContactInfo } = useContactInfo();
   
   const handleContactInfoChange = async (id: string, value: string) => {
-    const fieldMap: Record<string, keyof ContactInfo> = {
+    const fieldMap: Record<string, keyof typeof contactInfo> = {
       'footer-email': 'email',
       'footer-address': 'address',
       'footer-website': 'website'
@@ -24,7 +24,7 @@ const ContactSection = () => {
     if (id in fieldMap) {
       try {
         const field = fieldMap[id];
-        const updatedInfo: ContactInfo = {
+        const updatedInfo = {
           ...contactInfo,
           [field]: value
         };

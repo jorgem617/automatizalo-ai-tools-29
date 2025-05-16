@@ -37,7 +37,7 @@ export const fetchClientAutomations = async () => {
       .select(`
         *,
         automation:automations(*)
-      `) as any;
+      `);
 
     if (automationsError) {
       throw automationsError;
@@ -50,7 +50,7 @@ export const fetchClientAutomations = async () => {
         .from('users')
         .select('id, email')
         .eq('id', item.client_id)
-        .single() as any;
+        .single();
       
       // Even if user fetch fails, continue with default values
       const clientData = userError ? 
@@ -90,7 +90,7 @@ export const fetchClientIntegrationSettings = async (clientAutomationId: string)
       .from('client_integration_settings')
       .select('*')
       .eq('client_automation_id', clientAutomationId)
-      .order('integration_type') as any;
+      .order('integration_type');
 
     if (error) {
       throw error;
@@ -126,7 +126,7 @@ export const saveClientIntegrationSetting = async (data: ClientIntegrationSettin
           last_updated_by: (await supabase.auth.getUser()).data.user?.id
         })
         .eq('id', data.id)
-        .select() as any;
+        .select();
       
       if (error) throw error;
       result = updatedData?.[0];
@@ -144,7 +144,7 @@ export const saveClientIntegrationSetting = async (data: ClientIntegrationSettin
           status: data.status,
           last_updated_by: (await supabase.auth.getUser()).data.user?.id
         })
-        .select() as any;
+        .select();
       
       if (error) throw error;
       result = newData?.[0];
@@ -168,7 +168,7 @@ export const updateClientAutomationStatus = async (id: string, setupStatus: 'pen
       .update({ 
         setup_status: setupStatus,
       })
-      .eq('id', id) as any;
+      .eq('id', id);
     
     if (error) throw error;
     return true;
@@ -224,7 +224,7 @@ export const initializeClientIntegrationSettings = async (clientAutomation: Clie
     if (settingsToCreate.length > 0) {
       const { error } = await supabase
         .from('client_integration_settings')
-        .insert(settingsToCreate as any) as any;
+        .insert(settingsToCreate as any);
       
       if (error) throw error;
     }
