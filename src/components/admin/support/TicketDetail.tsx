@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SupportTicket, TicketResponse, Automation } from '@/types/automation';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isErrorResponse } from '@/types/supabase';
 
 interface TicketDetailProps {
   ticket: SupportTicket | null;
@@ -62,7 +62,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({
           created_by: user.id,
           is_admin: true,
           created_at: new Date().toISOString()
-        }]);
+        }]) as any;
         
       if (error) throw error;
       
@@ -89,7 +89,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({
       const { error: responseError } = await supabase
         .from('ticket_responses')
         .delete()
-        .eq('ticket_id', ticket.id);
+        .eq('ticket_id', ticket.id) as any;
       
       if (responseError) throw responseError;
       
@@ -97,7 +97,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({
       const { error } = await supabase
         .from('support_tickets')
         .delete()
-        .eq('id', ticket.id);
+        .eq('id', ticket.id) as any;
         
       if (error) throw error;
       

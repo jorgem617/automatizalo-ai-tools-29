@@ -1,20 +1,8 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { escapeSql, runQuery } from '@/components/admin/adminActions';
-
-export interface ClientIntegrationSetting {
-  id?: string;
-  client_automation_id: string;
-  integration_type: 'webhook' | 'form' | 'table' | 'custom_prompt';
-  test_url?: string;
-  production_url?: string;
-  integration_code?: string;
-  prompt_text?: string;
-  status: 'pending' | 'configured' | 'active';
-  created_at?: string;
-  updated_at?: string;
-  last_updated_by?: string;
-}
+import { ClientIntegrationSetting, ClientAutomation, User, isErrorResponse } from '@/types/supabase';
 
 export interface ClientAutomationWithDetails {
   id: string;
@@ -24,10 +12,7 @@ export interface ClientAutomationWithDetails {
   status: 'active' | 'canceled' | 'pending';
   next_billing_date: string;
   setup_status: 'pending' | 'in_progress' | 'completed';
-  client?: {
-    id: string;
-    email: string;
-  };
+  client?: User;
   automation?: {
     id: string;
     title: string;
@@ -52,22 +37,20 @@ export const fetchClientAutomations = async () => {
       .select(`
         *,
         automation:automations(*)
-      `)
-      .eq('status', 'active')
-      .order('purchase_date', { ascending: false });
+      `) as any;
 
     if (automationsError) {
       throw automationsError;
     }
 
     // For each client automation, fetch the associated user information separately
-    const clientAutomationsWithDetails = await Promise.all((automations || []).map(async (item) => {
+    const clientAutomationsWithDetails = await Promise.all((automations || []).map(async (item: any) => {
       // Get client info from users table
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, email')
         .eq('id', item.client_id)
-        .single();
+        .single() as any;
       
       // Even if user fetch fails, continue with default values
       const clientData = userError ? 
@@ -107,7 +90,7 @@ export const fetchClientIntegrationSettings = async (clientAutomationId: string)
       .from('client_integration_settings')
       .select('*')
       .eq('client_automation_id', clientAutomationId)
-      .order('integration_type');
+      .order('integration_type') as any;
 
     if (error) {
       throw error;
@@ -143,7 +126,7 @@ export const saveClientIntegrationSetting = async (data: ClientIntegrationSettin
           last_updated_by: (await supabase.auth.getUser()).data.user?.id
         })
         .eq('id', data.id)
-        .select();
+        .select() as any;
       
       if (error) throw error;
       result = updatedData?.[0];
@@ -161,7 +144,7 @@ export const saveClientIntegrationSetting = async (data: ClientIntegrationSettin
           status: data.status,
           last_updated_by: (await supabase.auth.getUser()).data.user?.id
         })
-        .select();
+        .select() as any;
       
       if (error) throw error;
       result = newData?.[0];
@@ -185,7 +168,7 @@ export const updateClientAutomationStatus = async (id: string, setupStatus: 'pen
       .update({ 
         setup_status: setupStatus,
       })
-      .eq('id', id);
+      .eq('id', id) as any;
     
     if (error) throw error;
     return true;
@@ -241,7 +224,7 @@ export const initializeClientIntegrationSettings = async (clientAutomation: Clie
     if (settingsToCreate.length > 0) {
       const { error } = await supabase
         .from('client_integration_settings')
-        .insert(settingsToCreate);
+        .insert(settingsToCreate as any) as any;
       
       if (error) throw error;
     }

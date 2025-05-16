@@ -8,6 +8,7 @@ import { BlogPost } from "@/types/blog";
 import { BlogFormData } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { BlogTranslation } from "@/types/supabase";
 
 interface BlogFormContainerProps {
   children: React.ReactNode;
@@ -123,7 +124,7 @@ export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({
             excerpt: translations.es.excerpt || '',
             content: translations.es.content
           }
-        ]);
+        ] as BlogTranslation[]) as any;
 
       if (error) throw error;
       return data;
