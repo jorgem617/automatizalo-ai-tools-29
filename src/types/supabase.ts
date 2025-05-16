@@ -1,6 +1,5 @@
 
 // Custom types for Supabase tables
-// This augments the auto-generated types without modifying them directly
 
 export interface ClientAutomation {
   id: string;
@@ -11,6 +10,8 @@ export interface ClientAutomation {
   next_billing_date: string;
   setup_status: 'pending' | 'in_progress' | 'completed';
   automation?: Automation;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Automation {
@@ -26,6 +27,7 @@ export interface Automation {
   active: boolean;
   image_url?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface ClientIntegrationSetting {
@@ -46,6 +48,17 @@ export interface User {
   id: string;
   email: string;
   created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContactInfo {
+  id: string;
+  website: string;
+  address: string;
+  phone: string;
+  email: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BlogTranslation {

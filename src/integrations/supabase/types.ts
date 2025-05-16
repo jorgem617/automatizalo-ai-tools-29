@@ -9,6 +9,140 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      automations: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          description: string | null
+          has_custom_prompt: boolean | null
+          has_form_integration: boolean | null
+          has_table_integration: boolean | null
+          has_webhook: boolean | null
+          id: string
+          image_url: string | null
+          installation_price: number | null
+          monthly_price: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          has_custom_prompt?: boolean | null
+          has_form_integration?: boolean | null
+          has_table_integration?: boolean | null
+          has_webhook?: boolean | null
+          id?: string
+          image_url?: string | null
+          installation_price?: number | null
+          monthly_price?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          has_custom_prompt?: boolean | null
+          has_form_integration?: boolean | null
+          has_table_integration?: boolean | null
+          has_webhook?: boolean | null
+          id?: string
+          image_url?: string | null
+          installation_price?: number | null
+          monthly_price?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      client_automations: {
+        Row: {
+          automation_id: string
+          client_id: string
+          created_at: string | null
+          id: string
+          next_billing_date: string
+          purchase_date: string
+          setup_status: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          automation_id: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          next_billing_date?: string
+          purchase_date?: string
+          setup_status?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          automation_id?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          next_billing_date?: string
+          purchase_date?: string
+          setup_status?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      client_integration_settings: {
+        Row: {
+          client_automation_id: string
+          created_at: string | null
+          id: string
+          integration_code: string | null
+          integration_type: string
+          last_updated_by: string | null
+          production_url: string | null
+          prompt_text: string | null
+          status: string
+          test_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_automation_id: string
+          created_at?: string | null
+          id?: string
+          integration_code?: string | null
+          integration_type: string
+          last_updated_by?: string | null
+          production_url?: string | null
+          prompt_text?: string | null
+          status?: string
+          test_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_automation_id?: string
+          created_at?: string | null
+          id?: string
+          integration_code?: string | null
+          integration_type?: string
+          last_updated_by?: string | null
+          production_url?: string | null
+          prompt_text?: string | null
+          status?: string
+          test_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_integration_settings_client_automation_id_fkey"
+            columns: ["client_automation_id"]
+            isOneToOne: false
+            referencedRelation: "client_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_info: {
         Row: {
           address: string
@@ -36,6 +170,27 @@ export type Database = {
           phone?: string
           updated_at?: string | null
           website?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
