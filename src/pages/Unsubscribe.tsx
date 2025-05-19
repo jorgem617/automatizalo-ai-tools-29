@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { runQuery } from '@/components/admin/adminActions';
+import { escapeSql } from '@/components/admin/adminActions';
 
 const Unsubscribe = () => {
   const [email, setEmail] = useState('');
@@ -24,7 +24,7 @@ const Unsubscribe = () => {
     try {
       // Use runQuery since newsletter_subscriptions may not be in the generated types
       const { data: existingSubscriptions, error: checkError } = await runQuery(
-        `SELECT id FROM newsletter_subscriptions WHERE email = '${email.replace(/'/g, "''")}'`
+        `SELECT id FROM newsletter_subscriptions WHERE email = '${escapeSql(email)}'`
       );
       
       if (checkError) {
@@ -44,7 +44,7 @@ const Unsubscribe = () => {
       
       // Delete the subscription
       const { error: deleteError } = await runQuery(
-        `DELETE FROM newsletter_subscriptions WHERE email = '${email.replace(/'/g, "''")}'`
+        `DELETE FROM newsletter_subscriptions WHERE email = '${escapeSql(email)}'`
       );
       
       if (deleteError) {

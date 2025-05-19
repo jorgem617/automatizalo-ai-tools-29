@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { execSql } from "@/utils/supabaseHelpers";
 
 export const updateDatabaseSchema = async () => {
   try {
@@ -28,22 +29,7 @@ export const updateDatabaseSchema = async () => {
 
 // Helper function to run a raw SQL query for tables not in TypeScript types
 export const runQuery = async <T = any>(query: string): Promise<{ data: T[] | null; error: any }> => {
-  try {
-    // Use the exec_sql RPC function to execute the query
-    const { data, error } = await supabase.rpc('exec_sql', { 
-      sql_query: query 
-    });
-    
-    if (error) {
-      console.error("Error executing query:", error);
-      throw error;
-    }
-    
-    return { data: data as T[], error: null };
-  } catch (err) {
-    console.error("Query error:", err);
-    return { data: null, error: err };
-  }
+  return execSql<T>(supabase, query);
 };
 
 // Helper function for webhook validation

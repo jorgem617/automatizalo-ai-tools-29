@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { castRelation } from '@/utils/supabaseHelpers';
+import { castRelation, ensureUserRole } from '@/utils/supabaseHelpers';
 
 const ClientLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -71,11 +71,12 @@ const ClientLogin = () => {
           console.error('Error fetching user role:', fetchError);
         }
 
-        // Default role if we can't access it
-        const userRole = userData && !('error' in userData) && userData.role ? userData.role : 'client';
+        // Process the user data to ensure role is available
+        const processedUser = ensureUserRole(userData);
+        const userRole = processedUser ? processedUser.role || 'client' : 'client';
 
         // If user doesn't exist or doesn't have admin role, update it
-        if (!userData || !userRole || userRole !== 'admin') {
+        if (!userData || userRole !== 'admin') {
           console.log('Setting admin role for main account');
           const {
             error: updateError
@@ -130,8 +131,9 @@ const ClientLogin = () => {
         return;
       }
       
-      // Get the role or default to 'client'
-      const userRole = userData && !('error' in userData) && userData.role ? userData.role : 'client';
+      // Process the user data to ensure role is available
+      const processedUser = ensureUserRole(userData);
+      const userRole = processedUser ? processedUser.role || 'client' : 'client';
       
       console.log('User role:', userRole);
 

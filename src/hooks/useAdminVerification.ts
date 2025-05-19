@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { castRelation } from '@/utils/supabaseHelpers';
+import { castRelation, ensureUserRole } from '@/utils/supabaseHelpers';
 
 interface AdminVerificationResult {
   isAdmin: boolean;
@@ -55,8 +55,9 @@ export const useAdminVerification = (): AdminVerificationResult => {
           return;
         }
 
-        // Get the role or default to 'client'
-        const userRole = data && !('error' in data) && data.role ? data.role : 'client';
+        // Process the user data to ensure role is available
+        const processedUser = ensureUserRole(data);
+        const userRole = processedUser ? processedUser.role || 'client' : 'client';
         
         if (userRole === 'admin') {
           setIsAdmin(true);

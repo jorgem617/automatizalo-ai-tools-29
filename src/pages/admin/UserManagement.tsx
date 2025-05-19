@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +11,7 @@ import { UserTable } from '@/components/admin/users/UserTable';
 import UserManagementHeader from '@/components/admin/users/UserManagementHeader';
 import EmptyUserState from '@/components/admin/users/EmptyUserState';
 import { useUserSyncService } from '@/components/admin/users/UserSyncService';
+import { execSql } from '@/utils/supabaseHelpers';
 
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -27,14 +27,16 @@ const UserManagement = () => {
     try {
       console.log('Fetching users...');
       
-      // First try using the RPC function (more secure)
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_users');
+      // Try to get users with a custom SQL query that includes the role field
+      const { data: sqlData, error: sqlError } = await execSql<User>(
+        supabase,
+        `SELECT id, email, role, created_at, updated_at FROM users ORDER BY created_at DESC`
+      );
       
-      if (rpcError) {
-        console.error('RPC error:', rpcError);
+      if (sqlError || !sqlData) {
+        console.error('SQL error:', sqlError);
         
-        // Fallback: Try direct query if RPC fails
-        console.log('Trying direct query...');
+        // Fallback: Try direct query if SQL fails
         const { data: directData, error: directError } = await supabase
           .from('users')
           .select('*')
@@ -45,11 +47,21 @@ const UserManagement = () => {
           toast.error('Failed to load users');
         } else if (directData) {
           console.log('Users loaded via direct query:', directData.length);
-          setUsers(directData as User[]);
+          // Add default role if missing
+          const usersWithRoles = directData.map(u => ({
+            ...u,
+            role: u.role || 'client'
+          }));
+          setUsers(usersWithRoles as User[]);
         }
-      } else if (rpcData) {
-        console.log('Users loaded via RPC:', rpcData.length);
-        setUsers(rpcData as User[]);
+      } else {
+        console.log('Users loaded via SQL:', sqlData.length);
+        // Add default role if missing
+        const usersWithRoles = sqlData.map(u => ({
+          ...u,
+          role: u.role || 'client'
+        }));
+        setUsers(usersWithRoles as User[]);
       }
     } catch (error) {
       console.error('Unexpected error fetching users:', error);

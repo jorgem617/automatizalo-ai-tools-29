@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { SupportTicket, ClientAutomation } from '@/types/automation';
+import { SupportTicket, ClientAutomation, Automation } from '@/types/automation';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
 import TicketCard from './ticket/TicketCard';
@@ -66,7 +65,7 @@ const SupportTicketsView = () => {
       // Process the data to handle potential relation errors
       const typedData = data.map(item => {
         // Handle the automation relation which might be an error
-        const defaultAutomation = {
+        const defaultAutomation: Automation = {
           id: item.automation_id,
           title: 'Unknown Automation',
           description: '',
@@ -76,7 +75,9 @@ const SupportTicketsView = () => {
           has_table_integration: false,
           installation_price: 0,
           monthly_price: 0,
-          active: true
+          active: true,
+          created_at: '',
+          updated_at: ''
         };
         
         return {

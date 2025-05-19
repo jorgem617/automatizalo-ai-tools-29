@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { ClientAutomation } from '@/types/automation';
+import { ClientAutomation, Automation } from '@/types/automation';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { castRelation } from '@/utils/supabaseHelpers';
@@ -51,7 +50,7 @@ const NewSupportTicketForm: React.FC<NewSupportTicketFormProps> = ({ preselected
       // Process the data to handle potential relation errors
       const typedData = data.map(item => {
         // Handle the automation relation which might be an error
-        const defaultAutomation = {
+        const defaultAutomation: Automation = {
           id: item.automation_id,
           title: 'Unknown Automation',
           description: '',
@@ -61,7 +60,9 @@ const NewSupportTicketForm: React.FC<NewSupportTicketFormProps> = ({ preselected
           has_table_integration: false,
           installation_price: 0,
           monthly_price: 0,
-          active: true
+          active: true,
+          created_at: '',
+          updated_at: ''
         };
         
         return {

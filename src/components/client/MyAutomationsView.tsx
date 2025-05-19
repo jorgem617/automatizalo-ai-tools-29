@@ -9,8 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import type { ClientAutomation } from '@/types/automation';
-import { castRelation } from '@/utils/supabaseHelpers';
+import type { ClientAutomation, Automation } from '@/types/automation';
+import { castRelation, safeCastArray } from '@/utils/supabaseHelpers';
 
 const MyAutomationsView: React.FC = () => {
   const { user } = useAuth();
@@ -36,7 +36,7 @@ const MyAutomationsView: React.FC = () => {
       // Process the data to handle potential relation errors
       return data.map(item => {
         // Handle the automation relation which might be an error
-        const defaultAutomation = {
+        const defaultAutomation: Automation = {
           id: item.automation_id,
           title: 'Unknown Automation',
           description: '',
@@ -46,7 +46,9 @@ const MyAutomationsView: React.FC = () => {
           has_table_integration: false,
           installation_price: 0,
           monthly_price: 0,
-          active: true
+          active: true,
+          created_at: '',
+          updated_at: ''
         };
         
         return {

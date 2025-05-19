@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { castRelation, safeCastArray } from "@/utils/supabaseHelpers";
+import { Automation } from "@/types/automation";
 
 // Define the missing ClientIntegrationSetting type
 export interface ClientIntegrationSetting {
@@ -27,15 +28,7 @@ export interface ClientAutomationWithDetails {
   purchase_date: string;
   next_billing_date: string;
   client?: { email: string; id: string };
-  automation?: {
-    id: string;
-    title: string;
-    description: string;
-    has_webhook: boolean;
-    has_custom_prompt: boolean;
-    has_form_integration: boolean;
-    has_table_integration: boolean;
-  };
+  automation?: Automation;
 }
 
 // Function to fetch client automations for the manager
@@ -55,7 +48,7 @@ export const fetchClientAutomations = async (): Promise<ClientAutomationWithDeta
     // Process the data to handle potential relation errors
     return data.map(item => {
       // Handle the automation relation which might be an error
-      const defaultAutomation = {
+      const defaultAutomation: Automation = {
         id: item.automation_id,
         title: 'Unknown Automation',
         description: '',
@@ -65,7 +58,9 @@ export const fetchClientAutomations = async (): Promise<ClientAutomationWithDeta
         has_table_integration: false,
         installation_price: 0,
         monthly_price: 0,
-        active: true
+        active: true,
+        created_at: '',
+        updated_at: ''
       };
       
       return {
@@ -130,7 +125,7 @@ export const initializeClientIntegrationSettings = async (
       if (automationError) throw automationError;
       
       // Handle potential error in the relation
-      const defaultAutomation = {
+      const defaultAutomation: Automation = {
         id: '',
         title: 'Unknown Automation',
         description: '',
@@ -140,7 +135,9 @@ export const initializeClientIntegrationSettings = async (
         has_table_integration: false,
         installation_price: 0,
         monthly_price: 0,
-        active: true
+        active: true,
+        created_at: '',
+        updated_at: ''
       };
       
       automation = castRelation(automationData.automation, defaultAutomation);

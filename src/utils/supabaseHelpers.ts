@@ -4,9 +4,9 @@
  * @param data The data returned from Supabase
  * @returns The data cast to the specified type or null if there's an error
  */
-export function safeCast<T>(data: any): T {
-  if (!data || data.error === true) {
-    return null as unknown as T;
+export function safeCast<T>(data: any): T | null {
+  if (!data || (typeof data === 'object' && 'error' in data)) {
+    return null;
   }
   return data as T;
 }
@@ -42,4 +42,36 @@ export function castRelation<T>(relation: any, fallbackValue: T): T {
     return fallbackValue;
   }
   return relation as T;
+}
+
+/**
+ * Execute SQL query safely using the runQuery helper
+ * This is a workaround for tables not in the TypeScript schema
+ */
+export function execSql<T = any>(supabase: any, query: string): Promise<{ data: T[] | null; error: any }> {
+  try {
+    return supabase.rpc('exec_sql', { sql_query: query });
+  } catch (err) {
+    return Promise.resolve({ data: null, error: err });
+  }
+}
+
+/**
+ * Type helper to add role field to User objects
+ * @param user User object from database
+ * @returns User with role field
+ */
+export function ensureUserRole(user: any): any {
+  if (!user) return null;
+  
+  // If it already has role, return as is
+  if ('role' in user && user.role) {
+    return user;
+  }
+  
+  // Add default role of 'client'
+  return {
+    ...user,
+    role: 'client'
+  };
 }

@@ -5,14 +5,14 @@ export interface Automation {
   description: string;
   installation_price: number;
   monthly_price: number;
-  created_at: string;
-  updated_at: string;
-  image_url?: string;
+  has_webhook: boolean;
+  has_custom_prompt: boolean;
+  has_form_integration: boolean;
+  has_table_integration: boolean;
   active: boolean;
-  has_custom_prompt?: boolean;
-  has_webhook?: boolean;
-  has_form_integration?: boolean;
-  has_table_integration?: boolean;
+  image_url?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ClientAutomation {
@@ -24,6 +24,8 @@ export interface ClientAutomation {
   next_billing_date: string;
   setup_status: 'pending' | 'in_progress' | 'completed';
   automation?: Automation;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface SupportTicket {
@@ -37,44 +39,11 @@ export interface SupportTicket {
   updated_at: string;
 }
 
-export interface TicketResponse {
+// Add new interface for newsletter subscriptions for type safety
+export interface NewsletterSubscription {
   id: string;
-  ticket_id: string;
-  message: string;
-  created_by: string;
-  is_admin: boolean;
+  email: string;
+  frequency: string;
   created_at: string;
-}
-
-export interface CustomPrompt {
-  id?: string;
-  prompt_text: string;
-  client_id: string;
-  automation_id: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Integration {
-  id?: string;
-  automation_id: string;
-  integration_type: 'webhook' | 'form' | 'table' | 'custom_prompt';
-  test_url?: string;
-  production_url?: string;
-  integration_code?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface ClientIntegrationSetting {
-  id?: string;
-  client_automation_id: string;
-  integration_type: 'webhook' | 'form' | 'table' | 'custom_prompt';
-  test_url?: string;
-  production_url?: string;
-  integration_code?: string;
-  prompt_text?: string;
-  status: 'pending' | 'configured' | 'active';
-  created_at?: string;
   updated_at?: string;
 }

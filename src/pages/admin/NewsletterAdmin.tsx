@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NewsletterManager from "@/components/admin/newsletter/NewsletterManager";
@@ -10,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { runQuery } from "@/components/admin/adminActions";
+import { NewsletterSubscription } from "@/types/automation";
 
 interface Subscriber {
   id: string;
@@ -48,10 +49,9 @@ const NewsletterAdmin = () => {
   const fetchSubscribers = async () => {
     setLoading(prev => ({ ...prev, subscribers: true }));
     try {
-      const { data, error } = await supabase
-        .from('newsletter_subscriptions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await runQuery<NewsletterSubscription>(
+        `SELECT * FROM newsletter_subscriptions ORDER BY created_at DESC`
+      );
         
       if (error) {
         throw error;
@@ -69,10 +69,10 @@ const NewsletterAdmin = () => {
             'created_at' in item
           )
           .map(item => ({
-            id: item.id as string,
-            email: item.email as string,
-            frequency: item.frequency as string,
-            created_at: item.created_at as string
+            id: item.id,
+            email: item.email,
+            frequency: item.frequency,
+            created_at: item.created_at
           }));
             
         setSubscribers(validSubscribers);
