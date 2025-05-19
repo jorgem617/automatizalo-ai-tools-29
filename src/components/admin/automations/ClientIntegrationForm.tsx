@@ -1,11 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, ArrowLeft, Save, Webhook, Box, Table, Loader2, MessageSquare } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import WebhookConfigCard from '@/components/admin/webhooks/WebhookConfigCard';
 import { 
   ClientAutomationWithDetails, 
   ClientIntegrationSetting,
@@ -13,8 +10,9 @@ import {
   saveClientIntegrationSetting,
   updateClientAutomationStatus
 } from './client-integration-utils';
-import CodeIntegration from './integrations/CodeIntegration';
-import WebhookIntegration from './integrations/WebhookIntegration';
+import LoadingIndicator from './LoadingIndicator';
+import StatusSummary from './StatusSummary';
+import IntegrationTabs from './IntegrationTabs';
 
 interface ClientIntegrationFormProps {
   clientAutomation: ClientAutomationWithDetails;
@@ -52,10 +50,6 @@ const ClientIntegrationForm: React.FC<ClientIntegrationFormProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  const getSettingByType = (type: string): ClientIntegrationSetting | undefined => {
-    return integrationSettings.find(setting => setting.integration_type === type);
   };
   
   const handleSave = async (setting: ClientIntegrationSetting) => {
@@ -124,205 +118,16 @@ const ClientIntegrationForm: React.FC<ClientIntegrationFormProps> = ({
     setIntegrationSettings(updatedSettings);
   };
   
-  const handleWebhookSave = (setting: ClientIntegrationSetting) => {
-    handleSave(setting);
-  };
-  
-  const renderIntegrationTabs = () => {
-    const availableIntegrations = integrationSettings.map(s => s.integration_type);
-    
-    if (availableIntegrations.length === 0) {
-      return (
-        <div className="bg-gray-50 p-6 rounded-md text-center">
-          <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-500">No integrations available for this automation.</p>
-        </div>
-      );
-    }
-    
-    return (
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full" style={{ 
-          gridTemplateColumns: `repeat(${availableIntegrations.length}, 1fr)` 
-        }}>
-          {availableIntegrations.includes('webhook') && 
-            <TabsTrigger value="webhook">Webhook</TabsTrigger>}
-          {availableIntegrations.includes('custom_prompt') && 
-            <TabsTrigger value="custom_prompt">Custom Prompt</TabsTrigger>}
-          {availableIntegrations.includes('form') && 
-            <TabsTrigger value="form">Form</TabsTrigger>}
-          {availableIntegrations.includes('table') && 
-            <TabsTrigger value="table">Table</TabsTrigger>}
-        </TabsList>
-        
-        {availableIntegrations.includes('webhook') && (
-          <TabsContent value="webhook" className="pt-4">
-            {renderWebhookIntegration()}
-          </TabsContent>
-        )}
-        
-        {availableIntegrations.includes('custom_prompt') && (
-          <TabsContent value="custom_prompt" className="pt-4">
-            {renderCustomPromptIntegration()}
-          </TabsContent>
-        )}
-        
-        {availableIntegrations.includes('form') && (
-          <TabsContent value="form" className="pt-4">
-            {renderFormIntegration()}
-          </TabsContent>
-        )}
-        
-        {availableIntegrations.includes('table') && (
-          <TabsContent value="table" className="pt-4">
-            {renderTableIntegration()}
-          </TabsContent>
-        )}
-      </Tabs>
-    );
-  };
-  
-  const renderWebhookIntegration = () => {
-    const webhookSetting = getSettingByType('webhook');
-    if (!webhookSetting) return null;
-    
-    return (
-      <WebhookIntegration
-        webhookData={{
-          automation_id: clientAutomation.automation_id,
-          integration_type: 'webhook',
-          test_url: webhookSetting.test_url || '',
-          production_url: webhookSetting.production_url || ''
-        }}
-        onWebhookTestUrlChange={(value) => updateWebhookData(webhookSetting, 'test_url', value)}
-        onWebhookProdUrlChange={(value) => updateWebhookData(webhookSetting, 'production_url', value)}
-        onSaveWebhook={() => handleWebhookSave(webhookSetting)}
-        isSaving={isSaving}
-      />
-    );
-  };
-  
-  const renderCustomPromptIntegration = () => {
-    const promptSetting = getSettingByType('custom_prompt');
-    if (!promptSetting) return null;
-    
-    return (
-      <CodeIntegration
-        data={{
-          automation_id: clientAutomation.automation_id,
-          integration_type: 'custom_prompt',
-          prompt_text: promptSetting.prompt_text || ''
-        }}
-        type="custom_prompt"
-        title="Custom Prompt Template"
-        description="Configure the prompt template for this automation"
-        placeholder="Enter the prompt template for this client..."
-        icon={<MessageSquare className="h-5 w-5" />}
-        onCodeChange={(value) => {
-          const updatedSettings = integrationSettings.map(s =>
-            s.id === promptSetting.id ? { ...s, prompt_text: value } : s
-          );
-          setIntegrationSettings(updatedSettings);
-        }}
-        onSave={() => handleSave(promptSetting)}
-        isSaving={isSaving}
-      />
-    );
-  };
-  
-  const renderFormIntegration = () => {
-    const formSetting = getSettingByType('form');
-    if (!formSetting) return null;
-    
-    return (
-      <CodeIntegration
-        data={{
-          automation_id: clientAutomation.automation_id,
-          integration_type: 'form',
-          integration_code: formSetting.integration_code || ''
-        }}
-        type="form"
-        title="Form Integration"
-        description="Paste the HTML code for the client's form embed"
-        placeholder="<iframe src='https://form-url' ...>"
-        icon={<Box className="h-5 w-5" />}
-        onCodeChange={(value) => {
-          const updatedSettings = integrationSettings.map(s =>
-            s.id === formSetting.id ? { ...s, integration_code: value } : s
-          );
-          setIntegrationSettings(updatedSettings);
-        }}
-        onSave={() => handleSave(formSetting)}
-        isSaving={isSaving}
-      />
-    );
-  };
-  
-  const renderTableIntegration = () => {
-    const tableSetting = getSettingByType('table');
-    if (!tableSetting) return null;
-    
-    return (
-      <CodeIntegration
-        data={{
-          automation_id: clientAutomation.automation_id,
-          integration_type: 'table',
-          integration_code: tableSetting.integration_code || ''
-        }}
-        type="table"
-        title="Table Integration"
-        description="Paste the HTML code for the client's table embed"
-        placeholder="<iframe src='https://table-url' ...>"
-        icon={<Table className="h-5 w-5" />}
-        onCodeChange={(value) => {
-          const updatedSettings = integrationSettings.map(s =>
-            s.id === tableSetting.id ? { ...s, integration_code: value } : s
-          );
-          setIntegrationSettings(updatedSettings);
-        }}
-        onSave={() => handleSave(tableSetting)}
-        isSaving={isSaving}
-      />
-    );
-  };
-  
-  const getStatusSummary = () => {
-    const total = integrationSettings.length;
-    const configured = integrationSettings.filter(s => s.status === 'configured' || s.status === 'active').length;
-    const completed = clientAutomation.setup_status === 'completed';
-    
-    return (
-      <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-lg">
-        <div>
-          <h3 className="text-sm font-medium">Integration Status</h3>
-          <p className="text-sm text-gray-500">{configured}/{total} configured</p>
-        </div>
-        <div>
-          {completed ? (
-            <Badge className="bg-green-100 text-green-800">Setup Completed</Badge>
-          ) : (
-            <Button 
-              size="sm"
-              onClick={handleCompleteSetup}
-              disabled={configured < total || isSaving}
-            >
-              Mark as Completed
-            </Button>
-          )}
-        </div>
-      </div>
-    );
+  const updateIntegrationSettings = (updatedSettings: ClientIntegrationSetting[]) => {
+    const newSettings = integrationSettings.map(s => {
+      const updatedSetting = updatedSettings.find(us => us.id === s.id);
+      return updatedSetting || s;
+    });
+    setIntegrationSettings(newSettings);
   };
   
   if (isLoading) {
-    return (
-      <div className="flex justify-center p-8">
-        <div className="flex flex-col items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <span className="ml-2 mt-2">Loading integration settings...</span>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator message="Loading integration settings..." />;
   }
   
   return (
@@ -340,9 +145,22 @@ const ClientIntegrationForm: React.FC<ClientIntegrationFormProps> = ({
         Client: {clientAutomation.client?.email}
       </div>
       
-      {getStatusSummary()}
+      <StatusSummary 
+        integrationSettings={integrationSettings}
+        clientAutomation={clientAutomation}
+        onCompleteSetup={handleCompleteSetup}
+        isSaving={isSaving}
+      />
       
-      {renderIntegrationTabs()}
+      <IntegrationTabs
+        integrationSettings={integrationSettings}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onSave={handleSave}
+        updateIntegrationSettings={updateIntegrationSettings}
+        updateWebhookData={updateWebhookData}
+        isSaving={isSaving}
+      />
     </div>
   );
 };
