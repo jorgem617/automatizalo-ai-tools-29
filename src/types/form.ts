@@ -1,6 +1,4 @@
 
-import { BlogPost } from "./blog";
-
 export interface BlogFormData {
   title: string;
   slug: string;
@@ -13,13 +11,19 @@ export interface BlogFormData {
   readTime: string;
   image: string;
   featured: boolean;
-  translations: {
-    fr: { title: string; excerpt: string; content: string; };
-    es: { title: string; excerpt: string; content: string; };
-  }
+  status: 'draft' | 'published';
+  translations: TranslationFormData;
 }
 
 export interface TranslationFormData {
-  fr: { title: string; excerpt: string; content: string; };
-  es: { title: string; excerpt: string; content: string; };
+  fr: {
+    title: string;
+    excerpt: string;
+    content: string;
+  };
+  es: {
+    title: string;
+    excerpt: string;
+    content: string;
+  };
 }

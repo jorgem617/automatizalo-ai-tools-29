@@ -1,5 +1,6 @@
 
 import { supabase, handleSupabaseError, retryOperation } from "@/integrations/supabase/client";
+import { runQuery, escapeSql } from "@/components/admin/adminActions";
 import { translateBlogContent } from "./translationService";
 import { toast } from "sonner";
 
@@ -40,14 +41,13 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
     }
     
     console.log("Fetching testimonials from Supabase...");
-    const { data, error } = await retryOperation(
-      async () => await supabase
-        .from('testimonials')
-        .select('*')
-        .order('created_at', { ascending: false }),
-      3,
-      1000
-    );
+    
+    const sql = `
+      SELECT * FROM testimonials
+      ORDER BY created_at DESC
+    `;
+    
+    const { data, error } = await runQuery<Testimonial>(sql);
     
     if (error) {
       console.error('Error fetching testimonials:', error);
@@ -84,13 +84,12 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
 export const fetchTestimonialTranslations = async (): Promise<TestimonialTranslation[]> => {
   try {
     console.log("Fetching testimonial translations from Supabase...");
-    const { data, error } = await retryOperation(
-      async () => await supabase
-        .from('testimonials_translations')
-        .select('*'),
-      2,
-      1000
-    );
+    
+    const sql = `
+      SELECT * FROM testimonials_translations
+    `;
+    
+    const { data, error } = await runQuery<TestimonialTranslation>(sql);
     
     if (error) {
       console.error('Error fetching testimonial translations:', error);
@@ -115,16 +114,18 @@ export const createTestimonial = async (testimonial: { name: string; company: st
     console.log("Creating new testimonial:", testimonial);
     
     // First, create the testimonial in English
-    const { data, error } = await supabase
-      .from('testimonials')
-      .insert({
-        name: testimonial.name,
-        company: testimonial.company,
-        text: testimonial.text,
-        language: 'en'
-      })
-      .select('*')
-      .single();
+    const sql = `
+      INSERT INTO testimonials (name, company, text, language)
+      VALUES (
+        '${escapeSql(testimonial.name)}',
+        ${testimonial.company ? `'${escapeSql(testimonial.company)}'` : 'NULL'},
+        '${escapeSql(testimonial.text)}',
+        'en'
+      )
+      RETURNING *
+    `;
+    
+    const { data, error } = await runQuery<Testimonial>(sql);
     
     if (error) {
       console.error('Error creating testimonial:', error);
@@ -132,17 +133,21 @@ export const createTestimonial = async (testimonial: { name: string; company: st
       throw error;
     }
     
-    console.log("Testimonial created successfully:", data);
+    if (!data || data.length === 0) {
+      throw new Error("Failed to retrieve created testimonial");
+    }
+    
+    console.log("Testimonial created successfully:", data[0]);
     
     // Clear cache to ensure fresh data on next fetch
     testimonialsCache = [];
     
     // Auto-translate the testimonial to other languages
-    if (data) {
-      autoTranslateTestimonial(data.id, testimonial.text, testimonial.name);
+    if (data && data.length > 0) {
+      autoTranslateTestimonial(data[0].id, testimonial.text, testimonial.name);
     }
     
-    return data;
+    return data[0];
   } catch (error) {
     console.error('Error creating testimonial:', error);
     toast.error(handleSupabaseError(error, "Failed to create testimonial"));
@@ -155,16 +160,33 @@ export const createTestimonial = async (testimonial: { name: string; company: st
  */
 export const updateTestimonial = async (id: string, updates: Partial<{ name: string; company: string | null; text: string; }>) => {
   try {
-    const { data, error } = await supabase
-      .from('testimonials')
-      .update(updates)
-      .eq('id', id)
-      .eq('language', 'en') // Only update the English version directly
-      .select('*')
-      .single();
+    const updateFields = Object.entries(updates)
+      .map(([key, value]) => {
+        if (value === null) {
+          return `${key} = NULL`;
+        } else if (typeof value === 'string') {
+          return `${key} = '${escapeSql(value)}'`;
+        }
+        return `${key} = ${value}`;
+      })
+      .join(', ');
+      
+    const sql = `
+      UPDATE testimonials
+      SET ${updateFields}, updated_at = now()
+      WHERE id = '${escapeSql(id)}'
+      AND language = 'en'
+      RETURNING *
+    `;
+    
+    const { data, error } = await runQuery<Testimonial>(sql);
     
     if (error) {
       throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      throw new Error("Failed to update testimonial or testimonial not found");
     }
     
     // If text was updated, auto-translate to other languages
@@ -172,7 +194,7 @@ export const updateTestimonial = async (id: string, updates: Partial<{ name: str
       autoTranslateTestimonial(id, updates.text, updates.name || '');
     }
     
-    return data;
+    return data[0];
   } catch (error) {
     console.error('Error updating testimonial:', error);
     throw error;
@@ -188,23 +210,28 @@ export const updateTestimonialTranslation = async (
   updatedText: string
 ) => {
   try {
-    const { data, error } = await supabase
-      .from('testimonials_translations')
-      .update({
-        text: updatedText,
-        updated_at: new Date().toISOString()
-      })
-      .eq('testimonial_id', testimonialId)
-      .eq('language', language)
-      .select('*')
-      .single();
+    const sql = `
+      UPDATE testimonials_translations
+      SET 
+        text = '${escapeSql(updatedText)}',
+        updated_at = now()
+      WHERE testimonial_id = '${escapeSql(testimonialId)}'
+      AND language = '${escapeSql(language)}'
+      RETURNING *
+    `;
+    
+    const { data, error } = await runQuery<TestimonialTranslation>(sql);
     
     if (error) {
       throw error;
     }
     
+    if (!data || data.length === 0) {
+      throw new Error("Failed to update translation or translation not found");
+    }
+    
     toast.success(`${language === 'fr' ? 'French' : 'Spanish'} translation updated successfully`);
-    return data;
+    return data[0];
   } catch (error) {
     console.error(`Error updating ${language} translation:`, error);
     toast.error(`Failed to update translation: ${error instanceof Error ? error.message : String(error)}`);
@@ -218,10 +245,12 @@ export const updateTestimonialTranslation = async (
 export const deleteTestimonial = async (id: string) => {
   try {
     // First delete translations
-    const { error: translationError } = await supabase
-      .from('testimonials_translations')
-      .delete()
-      .eq('testimonial_id', id);
+    const deleteTransSql = `
+      DELETE FROM testimonials_translations
+      WHERE testimonial_id = '${escapeSql(id)}'
+    `;
+      
+    const { error: translationError } = await runQuery(deleteTransSql);
       
     if (translationError) {
       console.error('Error deleting testimonial translations:', translationError);
@@ -229,10 +258,12 @@ export const deleteTestimonial = async (id: string) => {
     }
     
     // Then delete the main testimonial
-    const { error } = await supabase
-      .from('testimonials')
-      .delete()
-      .eq('id', id);
+    const deleteSql = `
+      DELETE FROM testimonials
+      WHERE id = '${escapeSql(id)}'
+    `;
+    
+    const { error } = await runQuery(deleteSql);
     
     if (error) {
       throw error;
@@ -267,16 +298,21 @@ const autoTranslateTestimonial = async (id: string, text: string, name: string) 
         );
         
         // Update or create the translated testimonial
-        const { error } = await supabase
-          .from('testimonials_translations')
-          .upsert({
-            testimonial_id: id,
-            language: lang,
-            text: translated.content,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'testimonial_id,language'
-          });
+        const upsertSql = `
+          INSERT INTO testimonials_translations (testimonial_id, language, text, updated_at)
+          VALUES (
+            '${escapeSql(id)}',
+            '${escapeSql(lang)}',
+            '${escapeSql(translated.content)}',
+            now()
+          )
+          ON CONFLICT (testimonial_id, language)
+          DO UPDATE SET
+            text = '${escapeSql(translated.content)}',
+            updated_at = now()
+        `;
+          
+        const { error } = await runQuery(upsertSql);
           
         if (error) {
           console.error(`Error storing ${lang} translation:`, error);

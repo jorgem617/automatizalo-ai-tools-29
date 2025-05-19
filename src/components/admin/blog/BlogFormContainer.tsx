@@ -16,6 +16,7 @@ interface BlogFormContainerProps {
   setFormData: React.Dispatch<React.SetStateAction<BlogFormData>>;
   translationData: any;
   editingTranslation: boolean;
+  id?: string; // Added id as an optional prop
 }
 
 export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({ 
@@ -23,9 +24,9 @@ export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({
   formData, 
   setFormData,
   translationData,
-  editingTranslation
+  editingTranslation,
+  id
 }) => {
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -58,6 +59,7 @@ export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({
         image: formData.image,
         feature_image: formData.image,
         featured: formData.featured,
+        status: formData.status,
         slug: formData.slug || formData.title.toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-')
       };
 

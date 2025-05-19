@@ -8,7 +8,7 @@ export const getPageContent = async (page: string, section: string, language: st
     const cacheKey = `page_content_${page}_${section}_${language}`;
     const cachedContent = localStorage.getItem(cacheKey);
     
-    // Get content from Supabase using the runQuery helper
+    // Get content from the database using SQL query
     const sql = `
       SELECT content
       FROM page_content

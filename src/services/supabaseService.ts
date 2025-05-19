@@ -1,3 +1,4 @@
+
 // Re-export services from their respective files
 export * from './testimonialService';
 export * from './contactService';
@@ -147,9 +148,7 @@ export const checkDatabaseSchema = async (): Promise<boolean> => {
       FROM unnest(ARRAY['${criticalTables.join("','")}']) as t(table_name)
     `;
     
-    const { data, error } = await supabase.rpc('exec_sql', { 
-      sql_query: sqlQuery 
-    });
+    const { data, error } = await runQuery(sqlQuery);
     
     if (error) {
       console.error("Schema check query failed:", error);
@@ -157,7 +156,6 @@ export const checkDatabaseSchema = async (): Promise<boolean> => {
     }
     
     if (data) {
-      // Fix the type issue by explicitly typing the data as an array of objects
       const tableData = data as Array<{ table_name: string, exists_flag: number }>;
       tableData.forEach((row) => {
         const exists = row.exists_flag > 0;

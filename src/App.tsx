@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -35,6 +34,12 @@ const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
 const WebhookManager = lazy(() => import('./pages/admin/WebhookManager'));
 const AutomationManager = lazy(() => import('./pages/admin/AutomationManager'));
 const ClientAutomationsManager = lazy(() => import('./pages/admin/ClientAutomationsManager'));
+
+// Initialize database tables when the app starts
+import initDatabaseTables from "./services/initDatabase";
+initDatabaseTables().catch(error => {
+  console.error("Failed to initialize database tables:", error);
+});
 
 function App() {
   return (
