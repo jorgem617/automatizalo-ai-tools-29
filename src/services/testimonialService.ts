@@ -1,5 +1,5 @@
 
-import { supabase, handleSupabaseError, retryOperation } from "@/integrations/supabase/client";
+import { handleSupabaseError, retryOperation } from "@/integrations/supabase/client";
 import { runQuery, escapeSql } from "@/components/admin/adminActions";
 import { translateBlogContent } from "./translationService";
 import { toast } from "sonner";

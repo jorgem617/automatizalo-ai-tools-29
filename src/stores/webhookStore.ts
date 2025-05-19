@@ -1,7 +1,7 @@
-
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
+import { runQuery, escapeSql } from "@/components/admin/adminActions";
 
 export type WebhookMode = "test" | "production";
 export type RequestMethod = "POST" | "GET";
@@ -89,82 +89,124 @@ export const useWebhookStore = create<WebhookState>()((set, get) => ({
       
       console.log('Initializing webhook store from Supabase');
       
-      const { data: configs, error } = await supabase
-        .from('webhook_configs')
-        .select('*')
-        .limit(1)
-        .single();
+      const sql = `
+        SELECT * FROM webhook_configs
+        LIMIT 1
+      `;
+      
+      const { data, error } = await runQuery(sql);
 
       if (error) {
         console.error('Error fetching webhook configs:', error);
         
         // If no configs exist, create a default one
-        if (error.code === 'PGRST116') {
+        if (error.code === 'PGRST116' || data?.length === 0) {
           console.log('No webhook configs found, creating default');
           
-          const { data: newConfig, error: insertError } = await supabase
-            .from('webhook_configs')
-            .insert({
-              blog_creation_test_url: 'https://webhook.site/your-test-webhook',
-              blog_creation_prod_url: 'https://webhook.site/your-production-webhook',
-              blog_social_test_url: 'https://webhook.site/your-test-social-webhook',
-              blog_social_prod_url: 'https://webhook.site/your-production-social-webhook',
-              website_domain: 'https://automatizalo.co',
-              blog_creation_mode: 'production',
-              blog_social_mode: 'test',
-              blog_creation_method: 'POST',
-              blog_social_method: 'GET'
-            })
-            .select()
-            .single();
+          const insertSql = `
+            INSERT INTO webhook_configs (
+              name,
+              type,
+              test_url,
+              production_url,
+              current_mode,
+              method
+            )
+            VALUES (
+              'Blog Creation Webhook',
+              'blog_creation',
+              'https://webhook.site/your-test-webhook',
+              'https://webhook.site/your-production-webhook',
+              'production',
+              'POST'
+            )
+            RETURNING *
+          `;
+          
+          const { data: newConfig, error: insertError } = await runQuery(insertSql);
           
           if (insertError) {
             console.error('Error creating default webhook config:', insertError);
             return;
           }
           
-          if (newConfig) {
-            console.log('Created default webhook config:', newConfig);
+          if (newConfig && newConfig.length > 0) {
+            console.log('Created default webhook config:', newConfig[0]);
             set({
               blogCreationUrl: {
-                test: newConfig.blog_creation_test_url,
-                production: newConfig.blog_creation_prod_url,
-                mode: newConfig.blog_creation_mode,
-                method: newConfig.blog_creation_method
+                test: newConfig[0].test_url,
+                production: newConfig[0].production_url,
+                mode: newConfig[0].current_mode,
+                method: newConfig[0].method
               },
               blogSocialShareUrl: {
-                test: newConfig.blog_social_test_url,
-                production: newConfig.blog_social_prod_url,
-                mode: newConfig.blog_social_mode,
-                method: newConfig.blog_social_method
+                test: '',
+                production: '',
+                mode: 'test',
+                method: 'GET'
               },
-              websiteDomain: newConfig.website_domain,
+              websiteDomain: 'https://automatizalo.co',
               isInitialized: true,
-              configId: newConfig.id
+              configId: newConfig[0].id
             });
+            
+            // Create social share webhook too
+            const socialShareSql = `
+              INSERT INTO webhook_configs (
+                name,
+                type,
+                test_url,
+                production_url,
+                current_mode,
+                method
+              )
+              VALUES (
+                'Blog Social Share Webhook',
+                'blog_social',
+                'https://webhook.site/your-test-social-webhook',
+                'https://webhook.site/your-production-social-webhook',
+                'test',
+                'GET'
+              )
+            `;
+            
+            await runQuery(socialShareSql);
           }
         }
         return;
       }
 
-      if (configs) {
-        console.log('Webhook configs loaded:', configs);
+      if (data && data.length > 0) {
+        // Get both blog creation and social webhooks
+        const blogCreationWebhook = data.find((webhook: any) => webhook.type === 'blog_creation') || data[0];
+        
+        const socialShareSql = `
+          SELECT * FROM webhook_configs
+          WHERE type = 'blog_social'
+          LIMIT 1
+        `;
+        
+        const { data: socialData } = await runQuery(socialShareSql);
+        const blogSocialWebhook = socialData && socialData.length > 0 ? socialData[0] : null;
+        
+        console.log('Webhook configs loaded:', { blogCreationWebhook, blogSocialWebhook });
+        
         set({
           blogCreationUrl: {
-            test: configs.blog_creation_test_url,
-            production: configs.blog_creation_prod_url,
-            mode: configs.blog_creation_mode,
-            method: configs.blog_creation_method
+            test: blogCreationWebhook.test_url || '',
+            production: blogCreationWebhook.production_url || '',
+            mode: blogCreationWebhook.current_mode || 'production',
+            method: blogCreationWebhook.method || 'POST'
           },
           blogSocialShareUrl: {
-            test: configs.blog_social_test_url,
-            production: configs.blog_social_prod_url,
-            mode: configs.blog_social_mode,
-            method: configs.blog_social_method
+            test: blogSocialWebhook?.test_url || '',
+            production: blogSocialWebhook?.production_url || '',
+            mode: blogSocialWebhook?.current_mode || 'test',
+            method: blogSocialWebhook?.method || 'GET'
           },
-          websiteDomain: configs.website_domain,
+          websiteDomain: 'https://automatizalo.co',
           isInitialized: true,
-          configId: configs.id
+          configId: blogCreationWebhook.id
         });
       }
     } catch (error) {

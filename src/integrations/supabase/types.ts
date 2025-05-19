@@ -197,6 +197,36 @@ export type Database = {
         }
         Relationships: []
       }
+      page_content: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          language: string
+          page: string
+          section_name: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          language?: string
+          page: string
+          section_name: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string
+          page?: string
+          section_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           automation_id: string
@@ -229,6 +259,71 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      testimonials: {
+        Row: {
+          company: string | null
+          created_at: string
+          id: string
+          language: string
+          name: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          language?: string
+          name: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          language?: string
+          name?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      testimonials_translations: {
+        Row: {
+          created_at: string
+          id: string
+          language: string
+          testimonial_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          language: string
+          testimonial_id: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          language?: string
+          testimonial_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "testimonials_translations_testimonial_id_fkey"
+            columns: ["testimonial_id"]
+            isOneToOne: false
+            referencedRelation: "testimonials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ticket_responses: {
         Row: {
@@ -283,6 +378,42 @@ export type Database = {
           email?: string
           id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      webhook_configs: {
+        Row: {
+          created_at: string
+          current_mode: string
+          id: string
+          method: string
+          name: string
+          production_url: string | null
+          test_url: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_mode?: string
+          id?: string
+          method?: string
+          name: string
+          production_url?: string | null
+          test_url?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_mode?: string
+          id?: string
+          method?: string
+          name?: string
+          production_url?: string | null
+          test_url?: string | null
+          type?: string
+          updated_at?: string
         }
         Relationships: []
       }

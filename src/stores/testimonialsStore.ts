@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { supabase, handleSupabaseError, retryOperation } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { fetchTestimonials, fetchTestimonialTranslations } from '@/services/testimonialService';
+import { runQuery, escapeSql } from '@/components/admin/adminActions';
 
 export interface Testimonial {
   id: string;
@@ -115,20 +117,33 @@ export const useTestimonials = () => {
   // Create a new testimonial
   const createTestimonial = async (newTestimonial: Omit<Testimonial, 'id'>) => {
     try {
-      const { data, error } = await supabase
-        .from('testimonials')
-        .insert(newTestimonial)
-        .select();
+      const sql = `
+        INSERT INTO testimonials (name, company, text, language)
+        VALUES (
+          '${escapeSql(newTestimonial.name)}',
+          ${newTestimonial.company ? `'${escapeSql(newTestimonial.company)}'` : 'NULL'},
+          '${escapeSql(newTestimonial.text)}',
+          'en'
+        )
+        RETURNING *
+      `;
+      
+      const { data, error } = await runQuery<Testimonial>(sql);
       
       if (error) throw error;
       
-      setTestimonials(prev => [data[0], ...prev]);
+      if (!data || data.length === 0) {
+        throw new Error("Failed to retrieve created testimonial");
+      }
+      
+      const createdTestimonial = data[0] as Testimonial;
+      setTestimonials(prev => [createdTestimonial, ...prev]);
       
       // Dispatch event to notify other components
-      window.dispatchEvent(new CustomEvent('testimonialCreated', { detail: data[0] }));
+      window.dispatchEvent(new CustomEvent('testimonialCreated', { detail: createdTestimonial }));
       
       toast.success("Testimonial added successfully");
-      return data[0];
+      return createdTestimonial;
     } catch (error: any) {
       console.error("Error creating testimonial:", error);
       toast.error("Failed to add testimonial");
@@ -139,23 +154,43 @@ export const useTestimonials = () => {
   // Update an existing testimonial
   const updateTestimonial = async (id: string, updates: Partial<Testimonial>) => {
     try {
-      const { data, error } = await supabase
-        .from('testimonials')
-        .update(updates)
-        .eq('id', id)
-        .select();
+      const updateFields = Object.entries(updates)
+        .map(([key, value]) => {
+          if (value === null) {
+            return `${key} = NULL`;
+          } else if (typeof value === 'string') {
+            return `${key} = '${escapeSql(value)}'`;
+          }
+          return `${key} = ${value}`;
+        })
+        .join(', ');
+        
+      const sql = `
+        UPDATE testimonials
+        SET ${updateFields}, updated_at = now()
+        WHERE id = '${escapeSql(id)}'
+        AND language = 'en'
+        RETURNING *
+      `;
+      
+      const { data, error } = await runQuery<Testimonial>(sql);
       
       if (error) throw error;
       
+      if (!data || data.length === 0) {
+        throw new Error("Failed to update testimonial or testimonial not found");
+      }
+      
+      const updatedTestimonial = data[0] as Testimonial;
       setTestimonials(prev => 
-        prev.map(testimonial => testimonial.id === id ? data[0] : testimonial)
+        prev.map(testimonial => testimonial.id === id ? updatedTestimonial : testimonial)
       );
       
       // Dispatch event to notify other components
-      window.dispatchEvent(new CustomEvent('testimonialUpdated', { detail: data[0] }));
+      window.dispatchEvent(new CustomEvent('testimonialUpdated', { detail: updatedTestimonial }));
       
       toast.success("Testimonial updated successfully");
-      return data[0];
+      return updatedTestimonial;
     } catch (error: any) {
       console.error("Error updating testimonial:", error);
       toast.error("Failed to update testimonial");
@@ -166,10 +201,13 @@ export const useTestimonials = () => {
   // Delete a testimonial
   const deleteTestimonial = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('testimonials')
-        .delete()
-        .eq('id', id);
+      const sql = `
+        DELETE FROM testimonials
+        WHERE id = '${escapeSql(id)}'
+        RETURNING id
+      `;
+      
+      const { data, error } = await runQuery(sql);
       
       if (error) throw error;
       

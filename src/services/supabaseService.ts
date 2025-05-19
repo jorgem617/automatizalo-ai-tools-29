@@ -5,6 +5,7 @@ export * from './contactService';
 
 // Add utility functions for general Supabase operations
 import { supabase, retryOperation, handleSupabaseError } from "@/integrations/supabase/client";
+import { runQuery, escapeSql } from "@/components/admin/adminActions";
 import { toast } from "sonner";
 
 /**
