@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { runQuery, escapeSql } from "@/components/admin/adminActions";
 import { toast } from "sonner";
 
 export const getPageContent = async (page: string, section: string, language: string = 'en'): Promise<string> => {
@@ -8,14 +8,16 @@ export const getPageContent = async (page: string, section: string, language: st
     const cacheKey = `page_content_${page}_${section}_${language}`;
     const cachedContent = localStorage.getItem(cacheKey);
     
-    // Get content from Supabase
-    const { data, error } = await supabase
-      .from('page_content')
-      .select('content')
-      .eq('page', page)
-      .eq('section_name', section)
-      .eq('language', language)
-      .maybeSingle();
+    // Get content from Supabase using the runQuery helper
+    const sql = `
+      SELECT content
+      FROM page_content
+      WHERE page = '${escapeSql(page)}'
+      AND section_name = '${escapeSql(section)}'
+      AND language = '${escapeSql(language)}'
+    `;
+    
+    const { data, error } = await runQuery<{ content: string }>(sql);
       
     if (error) {
       console.error('Error fetching content:', error);
@@ -24,10 +26,10 @@ export const getPageContent = async (page: string, section: string, language: st
       return `<h2>Content for ${section} on ${page} page</h2>`;
     }
     
-    if (data?.content) {
+    if (data && data.length > 0 && data[0].content) {
       // Update cache
-      localStorage.setItem(cacheKey, data.content);
-      return data.content;
+      localStorage.setItem(cacheKey, data[0].content);
+      return data[0].content;
     }
     
     // If no content found for requested language, try English
@@ -52,15 +54,22 @@ export const updatePageContent = async (
   language: string = 'en'
 ): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('page_content')
-      .upsert({
-        page,
-        section_name: section,
-        content,
-        language,
-        updated_at: new Date().toISOString()
-      });
+    const sql = `
+      INSERT INTO page_content (page, section_name, content, language, updated_at)
+      VALUES (
+        '${escapeSql(page)}',
+        '${escapeSql(section)}',
+        '${escapeSql(content)}',
+        '${escapeSql(language)}',
+        now()
+      )
+      ON CONFLICT (page, section_name, language) 
+      DO UPDATE SET 
+        content = EXCLUDED.content,
+        updated_at = now()
+    `;
+    
+    const { error } = await runQuery(sql);
     
     if (error) throw error;
 
