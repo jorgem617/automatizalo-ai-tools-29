@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { castRelation, safeCastArray } from "@/utils/supabaseHelpers";
@@ -47,7 +46,7 @@ export const fetchClientAutomations = async (): Promise<ClientAutomationWithDeta
     
     // Process the data to handle potential relation errors
     return data.map(item => {
-      // Handle the automation relation which might be an error
+      // Define default automation
       const defaultAutomation: Automation = {
         id: item.automation_id,
         title: 'Unknown Automation',
@@ -66,7 +65,7 @@ export const fetchClientAutomations = async (): Promise<ClientAutomationWithDeta
       return {
         ...item,
         client: item.client || { id: item.client_id, email: 'Unknown Client' },
-        automation: castRelation(item.automation, defaultAutomation)
+        automation: castRelation<Automation>(item.automation) || defaultAutomation
       } as ClientAutomationWithDetails;
     });
   } catch (error) {
@@ -124,7 +123,7 @@ export const initializeClientIntegrationSettings = async (
         
       if (automationError) throw automationError;
       
-      // Handle potential error in the relation
+      // Define default automation
       const defaultAutomation: Automation = {
         id: '',
         title: 'Unknown Automation',
@@ -140,7 +139,8 @@ export const initializeClientIntegrationSettings = async (
         updated_at: ''
       };
       
-      automation = castRelation(automationData.automation, defaultAutomation);
+      // Use castRelation with a default value
+      automation = castRelation<Automation>(automationData?.automation) || defaultAutomation;
     }
     
     const settingsToCreate: ClientIntegrationSetting[] = [];

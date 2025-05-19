@@ -45,9 +45,9 @@ export async function execSql<T>(
 }
 
 // Helper for handling relationships that might be errored
-export function castRelation<T>(relation: any): T | null {
+export function castRelation<T>(relation: any, defaultValue?: T): T | null {
   if (!relation || relation.error === true) {
-    return null;
+    return defaultValue || null;
   }
   return relation as T;
 }

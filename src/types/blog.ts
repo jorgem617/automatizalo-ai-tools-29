@@ -5,14 +5,14 @@ export interface BlogPost {
   slug: string;
   excerpt: string;
   content: string;
-  feature_image: string; // Added to match what's used in crudOperations.ts
-  author_name: string; // Added to match what's used in crudOperations.ts
-  image: string;
+  feature_image: string;
+  author_name: string;
+  image: string; // For backward compatibility
   category: string;
   tags: string[];
   date: string;
   readTime: string;
-  author: string;
+  author: string; // For backward compatibility
   featured?: boolean;
   url?: string;
   status: 'draft' | 'published';

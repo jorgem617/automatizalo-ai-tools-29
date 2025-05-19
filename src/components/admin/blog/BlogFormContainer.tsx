@@ -8,7 +8,7 @@ import { BlogPost } from "@/types/blog";
 import { BlogFormData } from "@/types/form";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { BlogTranslation } from "@/types/supabase";
+import { saveTranslation } from "@/services/blog/translationService";
 
 interface BlogFormContainerProps {
   children: React.ReactNode;
@@ -52,9 +52,11 @@ export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({
         category: formData.category,
         tags: tagsArray,
         author: formData.author,
+        author_name: formData.author,
         date: formData.date,
         readTime: formData.readTime,
         image: formData.image,
+        feature_image: formData.image,
         featured: formData.featured,
         slug: formData.slug || formData.title.toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-')
       };
@@ -65,13 +67,13 @@ export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({
       
       if (id) {
         console.log("Updating existing post with ID:", id);
-        await updateBlogPost(id, postData);
+        await updateBlogPost({...postData, id});
         savedPostId = id;
         toast.success("Post updated successfully");
       } else {
         console.log("Creating new post");
         const newPost = await createBlogPost(postData);
-        savedPostId = newPost.id;
+        savedPostId = newPost;
         toast.success("Post created successfully");
       }
       
@@ -104,32 +106,30 @@ export const BlogFormContainer: React.FC<BlogFormContainerProps> = ({
     }
   };
 
-  // Import from blogService to avoid circular dependencies
+  // Helper function to save blog translations
   const saveBlogTranslations = async (blogId: string, translations: any) => {
     try {
-      const translationsToUpsert: BlogTranslation[] = [
-        {
+      if (translations.fr?.title && translations.fr?.content) {
+        await saveTranslation({
           blog_post_id: blogId,
           language: 'fr',
           title: translations.fr.title,
           excerpt: translations.fr.excerpt || '',
           content: translations.fr.content
-        },
-        {
+        });
+      }
+      
+      if (translations.es?.title && translations.es?.content) {
+        await saveTranslation({
           blog_post_id: blogId,
           language: 'es',
           title: translations.es.title,
           excerpt: translations.es.excerpt || '',
           content: translations.es.content
-        }
-      ];
+        });
+      }
 
-      const { data, error } = await supabase
-        .from('blog_translations')
-        .upsert(translationsToUpsert);
-
-      if (error) throw error;
-      return data;
+      return true;
     } catch (error) {
       console.error("Error saving blog translations:", error);
       throw error;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, Suspense } from "react";
 import { fetchBlogPosts } from "@/services/blogService";
 import { BlogPost } from "@/types/blog";
@@ -28,8 +29,7 @@ const Blog = () => {
   } = useQuery({
     queryKey: ['blogPosts'],
     queryFn: async () => {
-      const posts = await fetchBlogPosts('published');
-      return posts;
+      return await fetchBlogPosts('published');
     },
     staleTime: 5 * 60 * 1000, // 5 minutes before refetching
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),

@@ -6,7 +6,7 @@ import { translateBlogContent } from "@/services/translationService";
 import { Loader2, Globe } from "lucide-react";
 import { BlogPost } from "@/types/blog";
 import { TranslationFormData } from "@/types/form";
-import { saveBlogTranslations } from "@/services/blogService";
+import { saveTranslation } from "@/services/blog/translationService";
 
 interface TranslationToolsProps {
   id?: string;
@@ -97,7 +97,26 @@ const TranslationTools: React.FC<TranslationToolsProps> = ({
     }
     
     try {
-      await saveBlogTranslations(id, translations);
+      if (translations.fr.title && translations.fr.content) {
+        await saveTranslation({
+          blog_post_id: id,
+          language: 'fr',
+          title: translations.fr.title,
+          excerpt: translations.fr.excerpt || '',
+          content: translations.fr.content
+        });
+      }
+      
+      if (translations.es.title && translations.es.content) {
+        await saveTranslation({
+          blog_post_id: id,
+          language: 'es',
+          title: translations.es.title,
+          excerpt: translations.es.excerpt || '',
+          content: translations.es.content
+        });
+      }
+      
       toast.success("Translations saved successfully");
     } catch (error) {
       console.error("Error saving translations:", error);
