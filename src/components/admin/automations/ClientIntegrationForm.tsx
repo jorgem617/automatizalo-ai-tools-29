@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, ArrowLeft, Save, Webhook, Box, Table, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Save, Webhook, Box, Table, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import WebhookConfigCard from '@/components/admin/webhooks/WebhookConfigCard';
@@ -14,6 +14,7 @@ import {
   updateClientAutomationStatus
 } from './client-integration-utils';
 import CodeIntegration from './integrations/CodeIntegration';
+import WebhookIntegration from './integrations/WebhookIntegration';
 
 interface ClientIntegrationFormProps {
   clientAutomation: ClientAutomationWithDetails;
@@ -186,25 +187,17 @@ const ClientIntegrationForm: React.FC<ClientIntegrationFormProps> = ({
     if (!webhookSetting) return null;
     
     return (
-      <WebhookConfigCard
-        title="Client Webhook Configuration"
-        description="Configure webhook URLs for this client automation"
-        icon={<Webhook className="h-5 w-5" />}
-        testUrl={webhookSetting.test_url || ''}
-        productionUrl={webhookSetting.production_url || ''}
-        method="POST"
-        mode="test"
-        onTestUrlChange={(value) => updateWebhookData(webhookSetting, 'test_url', value)}
-        onProductionUrlChange={(value) => updateWebhookData(webhookSetting, 'production_url', value)}
-        onMethodChange={() => {}}
-        onModeChange={() => {}}
-        onTest={() => toast.info('Webhook test function not implemented')}
-        onSave={(e) => {
-          e.preventDefault();
-          handleWebhookSave(webhookSetting);
+      <WebhookIntegration
+        webhookData={{
+          automation_id: clientAutomation.automation_id,
+          integration_type: 'webhook',
+          test_url: webhookSetting.test_url || '',
+          production_url: webhookSetting.production_url || ''
         }}
+        onWebhookTestUrlChange={(value) => updateWebhookData(webhookSetting, 'test_url', value)}
+        onWebhookProdUrlChange={(value) => updateWebhookData(webhookSetting, 'production_url', value)}
+        onSaveWebhook={() => handleWebhookSave(webhookSetting)}
         isSaving={isSaving}
-        showSaveButton={true}
       />
     );
   };
@@ -214,53 +207,26 @@ const ClientIntegrationForm: React.FC<ClientIntegrationFormProps> = ({
     if (!promptSetting) return null;
     
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Custom Prompt Template</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="prompt-template" className="block text-sm font-medium text-gray-700 mb-1">
-                Prompt Template
-              </label>
-              <textarea
-                id="prompt-template"
-                rows={8}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Enter the prompt template for this client..."
-                value={promptSetting.prompt_text || ''}
-                onChange={(e) => {
-                  const updatedSettings = integrationSettings.map(s =>
-                    s.id === promptSetting.id ? { ...s, prompt_text: e.target.value } : s
-                  );
-                  setIntegrationSettings(updatedSettings);
-                }}
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                This template will be available for the client to customize.
-              </p>
-            </div>
-            
-            <Button 
-              onClick={() => handleSave(promptSetting)}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Template
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <CodeIntegration
+        data={{
+          automation_id: clientAutomation.automation_id,
+          integration_type: 'custom_prompt',
+          prompt_text: promptSetting.prompt_text || ''
+        }}
+        type="custom_prompt"
+        title="Custom Prompt Template"
+        description="Configure the prompt template for this automation"
+        placeholder="Enter the prompt template for this client..."
+        icon={<MessageSquare className="h-5 w-5" />}
+        onCodeChange={(value) => {
+          const updatedSettings = integrationSettings.map(s =>
+            s.id === promptSetting.id ? { ...s, prompt_text: value } : s
+          );
+          setIntegrationSettings(updatedSettings);
+        }}
+        onSave={() => handleSave(promptSetting)}
+        isSaving={isSaving}
+      />
     );
   };
   
@@ -271,9 +237,9 @@ const ClientIntegrationForm: React.FC<ClientIntegrationFormProps> = ({
     return (
       <CodeIntegration
         data={{
-          automation_id: '',
+          automation_id: clientAutomation.automation_id,
           integration_type: 'form',
-          ...formSetting
+          integration_code: formSetting.integration_code || ''
         }}
         type="form"
         title="Form Integration"
@@ -299,9 +265,9 @@ const ClientIntegrationForm: React.FC<ClientIntegrationFormProps> = ({
     return (
       <CodeIntegration
         data={{
-          automation_id: '',
+          automation_id: clientAutomation.automation_id,
           integration_type: 'table',
-          ...tableSetting
+          integration_code: tableSetting.integration_code || ''
         }}
         type="table"
         title="Table Integration"

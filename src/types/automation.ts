@@ -1,5 +1,4 @@
 
-
 export interface Automation {
   id: string;
   title: string;
@@ -63,11 +62,11 @@ export interface TicketResponse {
 export interface Integration {
   id?: string;
   automation_id: string;
-  integration_type: 'webhook' | 'form' | 'table';
+  integration_type: 'webhook' | 'form' | 'table' | 'custom_prompt'; // Added 'custom_prompt'
   test_url?: string;
   production_url?: string;
   integration_code?: string;
+  prompt_text?: string; // Added field for custom prompts
   created_at?: string;
   updated_at?: string;
 }
-

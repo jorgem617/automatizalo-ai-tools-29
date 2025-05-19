@@ -5,6 +5,8 @@ export interface BlogPost {
   slug: string;
   excerpt: string;
   content: string;
+  feature_image: string; // Added to match what's used in crudOperations.ts
+  author_name: string; // Added to match what's used in crudOperations.ts
   image: string;
   category: string;
   tags: string[];
@@ -12,8 +14,8 @@ export interface BlogPost {
   readTime: string;
   author: string;
   featured?: boolean;
-  url?: string; // Added URL field for source reference
-  status: 'draft' | 'published'; // Changed to required field with specific types
+  url?: string;
+  status: 'draft' | 'published';
   translations?: {
     fr?: {
       title?: string;
@@ -26,10 +28,12 @@ export interface BlogPost {
       content?: string;
     };
   };
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BlogTranslation {
-  id: string;
+  id?: string; // Made optional since it's sometimes not available
   blog_post_id: string;
   language: string;
   title: string;

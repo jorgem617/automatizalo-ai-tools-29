@@ -1,132 +1,111 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { BlogTranslation, NewBlogTranslation } from "@/types/blog";
-import { TranslationFormData } from "@/types/form";
-import { toast } from "sonner";
+import { BlogTranslation, NewBlogTranslation } from '@/types/blog';
+import { runQuery, escapeSql } from '@/components/admin/adminActions';
+import { toast } from 'sonner';
 
 /**
- * Save or update blog translations for a post
+ * Save a new blog translation
  */
-export const saveBlogTranslations = async (
-  blogPostId: string,
-  translations: TranslationFormData
-): Promise<void> => {
-  console.log("Saving translations for post:", blogPostId, translations);
-
+export const saveTranslation = async (translation: NewBlogTranslation): Promise<boolean> => {
   try {
-    // Handle French translations
-    if (translations.fr.title && translations.fr.content) {
-      await upsertTranslation(blogPostId, "fr", translations.fr);
-    }
-
-    // Handle Spanish translations
-    if (translations.es.title && translations.es.content) {
-      await upsertTranslation(blogPostId, "es", translations.es);
-    }
-
-    toast.success("Translations saved successfully");
-  } catch (error) {
-    console.error("Error saving translations:", error);
-    toast.error(`Failed to save translations: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
-  }
-};
-
-/**
- * Helper function to update or insert a translation
- */
-const upsertTranslation = async (
-  blogPostId: string,
-  language: string,
-  translationData: { title: string; excerpt: string; content: string }
-): Promise<void> => {
-  console.log(`Upserting ${language} translation for post ${blogPostId}:`, translationData);
-
-  // First check if a translation already exists
-  const { data: existingTranslation, error: fetchError } = await supabase
-    .from('blog_translations')
-    .select()
-    .eq('blog_post_id', blogPostId)
-    .eq('language', language)
-    .maybeSingle();
-
-  if (fetchError) {
-    console.error(`Error checking for existing ${language} translation:`, fetchError);
-    throw new Error(`Error checking for existing translation: ${fetchError.message}`);
-  }
-
-  const translationRecord: NewBlogTranslation = {
-    blog_post_id: blogPostId,
-    language,
-    title: translationData.title,
-    excerpt: translationData.excerpt,
-    content: translationData.content
-  };
-
-  if (existingTranslation) {
-    // Update existing translation
-    console.log(`Updating existing ${language} translation with ID ${existingTranslation.id}`);
-    const { error: updateError } = await supabase
-      .from('blog_translations')
-      .update(translationRecord)
-      .eq('id', existingTranslation.id);
-
-    if (updateError) {
-      console.error(`Error updating ${language} translation:`, updateError);
-      throw new Error(`Failed to update translation: ${updateError.message}`);
-    }
-  } else {
-    // Insert new translation
-    console.log(`Creating new ${language} translation for post ${blogPostId}`);
-    const { error: insertError } = await supabase
-      .from('blog_translations')
-      .insert(translationRecord);
-
-    if (insertError) {
-      console.error(`Error creating ${language} translation:`, insertError);
-      throw new Error(`Failed to create translation: ${insertError.message}`);
-    }
-  }
-};
-
-/**
- * Get all translations for a blog post
- */
-export const getBlogTranslations = async (blogPostId: string): Promise<TranslationFormData> => {
-  console.log("Fetching translations for post:", blogPostId);
-  
-  const result: TranslationFormData = {
-    fr: { title: "", excerpt: "", content: "" },
-    es: { title: "", excerpt: "", content: "" }
-  };
-
-  try {
-    const { data, error } = await supabase
-      .from('blog_translations')
-      .select('*')
-      .eq('blog_post_id', blogPostId);
-
+    const sql = `
+      INSERT INTO blog_translations (
+        blog_post_id,
+        language,
+        title,
+        excerpt,
+        content
+      ) VALUES (
+        '${escapeSql(translation.blog_post_id)}',
+        '${escapeSql(translation.language)}',
+        '${escapeSql(translation.title)}',
+        '${escapeSql(translation.excerpt)}',
+        '${escapeSql(translation.content)}'
+      )
+      ON CONFLICT (blog_post_id, language)
+      DO UPDATE SET
+        title = EXCLUDED.title,
+        excerpt = EXCLUDED.excerpt,
+        content = EXCLUDED.content
+    `;
+    
+    const { error } = await runQuery(sql);
+    
     if (error) {
-      console.error("Error fetching translations:", error);
-      throw new Error(`Failed to fetch translations: ${error.message}`);
+      console.error('Error saving translation:', error);
+      return false;
     }
-
-    // Process the translations and organize them by language
-    if (data && data.length > 0) {
-      data.forEach((translation: BlogTranslation) => {
-        if (translation.language === 'fr' || translation.language === 'es') {
-          result[translation.language] = {
-            title: translation.title,
-            excerpt: translation.excerpt,
-            content: translation.content
-          };
-        }
-      });
-    }
-
-    return result;
+    
+    return true;
   } catch (error) {
-    console.error("Error in getBlogTranslations:", error);
-    return result; // Return empty translations on error
+    console.error('Failed to save translation:', error);
+    return false;
+  }
+};
+
+/**
+ * Get translations for a specific blog post
+ */
+export const getTranslations = async (blogPostId: string): Promise<BlogTranslation[]> => {
+  try {
+    const sql = `SELECT * FROM blog_translations WHERE blog_post_id = '${escapeSql(blogPostId)}'`;
+    
+    const { data, error } = await runQuery<BlogTranslation>(sql);
+    
+    if (error) {
+      console.error('Error getting translations:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Failed to get translations:', error);
+    return [];
+  }
+};
+
+/**
+ * Delete a specific translation by blog post ID and language
+ */
+export const deleteTranslation = async (blogPostId: string, language: string): Promise<boolean> => {
+  try {
+    const sql = `
+      DELETE FROM blog_translations 
+      WHERE blog_post_id = '${escapeSql(blogPostId)}' 
+      AND language = '${escapeSql(language)}'
+    `;
+    
+    const { error } = await runQuery(sql);
+    
+    if (error) {
+      console.error('Error deleting translation:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to delete translation:', error);
+    return false;
+  }
+};
+
+/**
+ * Delete all translations for a blog post
+ */
+export const deleteAllTranslations = async (blogPostId: string): Promise<boolean> => {
+  try {
+    const sql = `DELETE FROM blog_translations WHERE blog_post_id = '${escapeSql(blogPostId)}'`;
+    
+    const { error } = await runQuery(sql);
+    
+    if (error) {
+      console.error('Error deleting all translations:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to delete all translations:', error);
+    return false;
   }
 };

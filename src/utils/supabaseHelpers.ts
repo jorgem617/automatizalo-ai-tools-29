@@ -1,77 +1,53 @@
 
-/**
- * Safely cast data from Supabase to a specific type, handling potential errors
- * @param data The data returned from Supabase
- * @returns The data cast to the specified type or null if there's an error
- */
-export function safeCast<T>(data: any): T | null {
-  if (!data || (typeof data === 'object' && 'error' in data)) {
-    return null;
-  }
+import { User } from '@/types/user';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+// Ensure user has a role property
+export const ensureUserRole = (user: any): User => {
+  if (!user) return null as any;
+  
+  return {
+    ...user,
+    role: user.role || 'client' // Default to 'client' if no role is set
+  };
+};
+
+// Cast data from supabase to the expected type
+export function safeCast<T>(data: any): T {
   return data as T;
 }
 
-/**
- * Helper to safely cast an array of data from Supabase
- * @param dataArray Array of data from Supabase
- * @returns Array of safely cast items
- */
-export function safeCastArray<T>(dataArray: any[]): T[] {
-  if (!Array.isArray(dataArray)) {
-    return [];
+// Cast array data from supabase to an array of the expected type
+export function safeCastArray<T>(data: any[]): T[] {
+  return data as T[];
+}
+
+// Execute SQL query
+export async function execSql<T>(
+  supabase: SupabaseClient,
+  sqlQuery: string
+): Promise<{ data: T[] | null; error: any }> {
+  try {
+    const { data, error } = await supabase.rpc('exec_sql', {
+      query_text: sqlQuery
+    });
+    
+    if (error) {
+      console.error('SQL Error:', error);
+      return { data: null, error };
+    }
+    
+    return { data: data as T[], error: null };
+  } catch (error) {
+    console.error('Execution Error:', error);
+    return { data: null, error };
   }
-  
-  return dataArray.map(item => {
-    return safeCast<T>(item);
-  }).filter((item): item is T => item !== null);
 }
 
-/**
- * Type guard to check if an object is a Supabase error response
- */
-export function isSupabaseError(obj: any): boolean {
-  return obj && typeof obj === 'object' && obj.error === true;
-}
-
-/**
- * Cast Supabase response to proper types, handling error objects
- * Useful for nested relationships that might be error objects
- */
-export function castRelation<T>(relation: any, fallbackValue: T): T {
-  if (isSupabaseError(relation)) {
-    return fallbackValue;
+// Helper for handling relationships that might be errored
+export function castRelation<T>(relation: any): T | null {
+  if (!relation || relation.error === true) {
+    return null;
   }
   return relation as T;
-}
-
-/**
- * Execute SQL query safely using the runQuery helper
- * This is a workaround for tables not in the TypeScript schema
- */
-export function execSql<T = any>(supabase: any, query: string): Promise<{ data: T[] | null; error: any }> {
-  try {
-    return supabase.rpc('exec_sql', { sql_query: query });
-  } catch (err) {
-    return Promise.resolve({ data: null, error: err });
-  }
-}
-
-/**
- * Type helper to add role field to User objects
- * @param user User object from database
- * @returns User with role field
- */
-export function ensureUserRole(user: any): any {
-  if (!user) return null;
-  
-  // If it already has role, return as is
-  if ('role' in user && user.role) {
-    return user;
-  }
-  
-  // Add default role of 'client'
-  return {
-    ...user,
-    role: 'client'
-  };
 }

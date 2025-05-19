@@ -1,4 +1,3 @@
-
 import { useState, useEffect, Suspense } from "react";
 import { fetchBlogPosts } from "@/services/blogService";
 import { BlogPost } from "@/types/blog";
@@ -28,16 +27,13 @@ const Blog = () => {
     error 
   } = useQuery({
     queryKey: ['blogPosts'],
-    queryFn: fetchBlogPosts,
+    queryFn: async () => {
+      const posts = await fetchBlogPosts('published');
+      return posts;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes before refetching
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
     retry: 2,
-    meta: {
-      onError: (err: Error) => {
-        console.error("Failed to load blog posts:", err);
-        toast.error("Failed to load blog posts. Please try again.");
-      }
-    }
   });
 
   useEffect(() => {

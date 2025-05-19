@@ -9,7 +9,7 @@ import type { Integration } from '@/types/automation';
 
 interface CodeIntegrationProps {
   data: Integration;
-  type: 'form' | 'table';
+  type: 'form' | 'table' | 'custom_prompt'; // Added custom_prompt to supported types
   title: string;
   description: string;
   placeholder: string;
@@ -43,18 +43,22 @@ const CodeIntegration: React.FC<CodeIntegrationProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label htmlFor={`${type}-code`}>Embed Code</Label>
+          <Label htmlFor={`${type}-code`}>
+            {type === 'custom_prompt' ? 'Prompt Template' : 'Embed Code'}
+          </Label>
           <div className="flex items-center space-x-2 mb-2">
             <Code className="h-4 w-4 text-gray-500" />
             <p className="text-sm text-gray-500">
-              Paste the HTML code for your integration
+              {type === 'custom_prompt' 
+                ? 'Enter the prompt template for this automation' 
+                : 'Paste the HTML code for your integration'}
             </p>
           </div>
           <Textarea 
             id={`${type}-code`}
             placeholder={placeholder}
             rows={10}
-            value={data?.integration_code || ''}
+            value={type === 'custom_prompt' ? (data?.prompt_text || '') : (data?.integration_code || '')}
             onChange={(e) => {
               if (onChange) onChange(e);
               onCodeChange(e.target.value);
@@ -63,7 +67,7 @@ const CodeIntegration: React.FC<CodeIntegrationProps> = ({
           />
         </div>
         
-        {data?.integration_code && (
+        {type !== 'custom_prompt' && data?.integration_code && (
           <div>
             <Label>Preview</Label>
             <div className="mt-2 border rounded-md p-4 bg-gray-50">

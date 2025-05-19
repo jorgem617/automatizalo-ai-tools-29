@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { castRelation, ensureUserRole } from '@/utils/supabaseHelpers';
 import { User } from '@/types/user';
 import { execSql } from '@/utils/supabaseHelpers';
+import { runQuery } from '@/components/admin/adminActions';
 
 interface AdminVerificationResult {
   isAdmin: boolean;
@@ -44,10 +45,8 @@ export const useAdminVerification = (): AdminVerificationResult => {
         }
 
         // Check if the user has the admin role in the database
-        const { data, error } = await execSql<User>(
-          supabase,
-          `SELECT id, email, role FROM users WHERE id = '${user.id}'`
-        );
+        const query = `SELECT id, email, role FROM users WHERE id = '${user.id}'`;
+        const { data, error } = await runQuery<User>(query);
 
         if (error || !data || data.length === 0) {
           console.error('Error checking admin status:', error);

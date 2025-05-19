@@ -1,3 +1,4 @@
+
 import { BlogPost, BlogTranslation } from '@/types/blog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,10 +12,15 @@ const formatBlogPost = (post: any): BlogPost => {
     title: post.title,
     content: post.content,
     slug: post.slug,
-    excerpt: post.excerpt,
-    feature_image: post.feature_image,
-    tags: post.tags,
-    author_name: post.author_name,
+    excerpt: post.excerpt || '',
+    feature_image: post.feature_image || '',
+    image: post.feature_image || '', // Map feature_image to image for compatibility
+    tags: post.tags || [],
+    author_name: post.author_name || '',
+    author: post.author_name || '', // Map author_name to author for compatibility
+    category: post.category || 'Uncategorized',
+    date: post.created_at || new Date().toISOString(),
+    readTime: '5 min', // Default read time
     status: post.status || 'draft',
     created_at: post.created_at,
     updated_at: post.updated_at
@@ -42,9 +48,9 @@ export const saveBlogPost = async (blogPost: BlogPost): Promise<string | null> =
         '${escapeSql(blogPost.content)}', 
         '${escapeSql(blogPost.slug)}', 
         '${escapeSql(blogPost.excerpt || '')}', 
-        '${escapeSql(blogPost.feature_image || '')}', 
+        '${escapeSql(blogPost.feature_image || blogPost.image || '')}', 
         '${escapeSql(JSON.stringify(blogPost.tags || []))}', 
-        '${escapeSql(blogPost.author_name || '')}',
+        '${escapeSql(blogPost.author_name || blogPost.author || '')}',
         '${escapeSql(blogPost.status || 'draft')}'
       )
       RETURNING id
@@ -76,9 +82,9 @@ export const updateBlogPost = async (blogPost: BlogPost): Promise<boolean> => {
         content = '${escapeSql(blogPost.content)}', 
         slug = '${escapeSql(blogPost.slug)}', 
         excerpt = '${escapeSql(blogPost.excerpt || '')}', 
-        feature_image = '${escapeSql(blogPost.feature_image || '')}', 
+        feature_image = '${escapeSql(blogPost.feature_image || blogPost.image || '')}', 
         tags = '${escapeSql(JSON.stringify(blogPost.tags || []))}', 
-        author_name = '${escapeSql(blogPost.author_name || '')}',
+        author_name = '${escapeSql(blogPost.author_name || blogPost.author || '')}',
         status = '${escapeSql(blogPost.status || 'draft')}',
         updated_at = NOW()
       WHERE id = '${blogPost.id}'

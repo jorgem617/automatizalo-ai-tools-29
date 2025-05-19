@@ -1,3 +1,4 @@
+
 import { BlogPost } from '@/types/blog';
 import { supabase } from '@/integrations/supabase/client';
 import { runQuery, escapeSql } from '@/components/admin/adminActions';
@@ -22,7 +23,18 @@ export const fetchBlogPosts = async (filter?: 'published' | 'draft'): Promise<Bl
     
     if (error) throw error;
     
-    return data || [];
+    // Map the returned data to ensure it matches the BlogPost type
+    const blogPosts = (data || []).map(post => ({
+      ...post,
+      image: post.feature_image || '', // Ensure image field exists
+      category: post.category || 'Uncategorized',
+      author: post.author_name || '',
+      date: post.created_at || '',
+      readTime: '5 min',
+      tags: post.tags || []
+    }));
+    
+    return blogPosts;
   } catch (error) {
     console.error("Error fetching blog posts:", error);
     return [];
@@ -42,7 +54,17 @@ export const fetchBlogPostById = async (id: string): Promise<BlogPost | null> =>
       return null;
     }
     
-    return data[0];
+    // Map the returned data to ensure it matches the BlogPost type
+    const post = data[0];
+    return {
+      ...post,
+      image: post.feature_image || '', // Ensure image field exists
+      category: post.category || 'Uncategorized',
+      author: post.author_name || '',
+      date: post.created_at || '',
+      readTime: '5 min',
+      tags: post.tags || []
+    };
   } catch (error) {
     console.error("Error fetching blog post by ID:", error);
     return null;
@@ -62,7 +84,17 @@ export const fetchBlogPostBySlug = async (slug: string): Promise<BlogPost | null
       return null;
     }
     
-    return data[0];
+    // Map the returned data to ensure it matches the BlogPost type
+    const post = data[0];
+    return {
+      ...post,
+      image: post.feature_image || '', // Ensure image field exists
+      category: post.category || 'Uncategorized',
+      author: post.author_name || '',
+      date: post.created_at || '',
+      readTime: '5 min',
+      tags: post.tags || []
+    };
   } catch (error) {
     console.error("Error fetching blog post by slug:", error);
     return null;
@@ -80,7 +112,18 @@ export const fetchRecentBlogPosts = async (limit: number = 3): Promise<BlogPost[
     
     if (error) throw error;
     
-    return data || [];
+    // Map the returned data to ensure it matches the BlogPost type
+    const blogPosts = (data || []).map(post => ({
+      ...post,
+      image: post.feature_image || '', // Ensure image field exists
+      category: post.category || 'Uncategorized',
+      author: post.author_name || '',
+      date: post.created_at || '',
+      readTime: '5 min',
+      tags: post.tags || []
+    }));
+    
+    return blogPosts;
   } catch (error) {
     console.error("Error fetching recent blog posts:", error);
     return [];
@@ -92,10 +135,8 @@ export const fetchRecentBlogPosts = async (limit: number = 3): Promise<BlogPost[
  */
 export const fetchBlogPostTranslations = async (blogPostId: string): Promise<any[]> => {
   try {
-    const { data, error } = await supabase
-      .from('blog_translations')
-      .select('*')
-      .eq('blog_post_id', blogPostId);
+    const query = `SELECT * FROM blog_translations WHERE blog_post_id = '${escapeSql(blogPostId)}'`;
+    const { data, error } = await runQuery<any>(query);
       
     if (error) throw error;
     
@@ -112,7 +153,7 @@ export const fetchBlogPostTranslations = async (blogPostId: string): Promise<any
 export const fetchBlogPostsByTag = async (tag: string): Promise<BlogPost[]> => {
   try {
     // Fetch all blog posts
-    const allPosts = await fetchBlogPosts();
+    const allPosts = await fetchBlogPosts('published');
 
     // Filter posts that include the specified tag
     const filteredPosts = allPosts.filter(post => post.tags && post.tags.includes(tag));
@@ -134,11 +175,11 @@ export const fetchSimilarBlogPosts = async (blogPost: BlogPost, limit: number = 
 
   try {
     // Fetch all blog posts
-    const allPosts = await fetchBlogPosts();
+    const allPosts = await fetchBlogPosts('published');
 
     // Filter posts that have at least one tag in common, excluding the current blog post
     const similarPosts = allPosts.filter(post =>
-      post.id !== blogPost.id && post.tags && post.tags.some(tag => blogPost.tags.includes(tag))
+      post.id !== blogPost.id && post.tags && post.tags.some(tag => blogPost.tags?.includes(tag))
     );
 
     // Sort by the number of common tags
