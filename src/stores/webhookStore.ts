@@ -1,3 +1,4 @@
+
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
@@ -236,16 +237,18 @@ export const useWebhookStore = create<WebhookState>()((set, get) => ({
     }
     
     try {
-      // Update Supabase
-      const { error } = await supabase
-        .from('webhook_configs')
-        .update({
-          blog_creation_test_url: updatedBlogCreationUrl.test,
-          blog_creation_prod_url: updatedBlogCreationUrl.production,
-          blog_creation_mode: updatedBlogCreationUrl.mode,
-          blog_creation_method: updatedBlogCreationUrl.method
-        })
-        .eq('id', get().configId);
+      // Update Supabase using the correct field names
+      const updateSql = `
+        UPDATE webhook_configs
+        SET 
+          test_url = '${escapeSql(updatedBlogCreationUrl.test)}',
+          production_url = '${escapeSql(updatedBlogCreationUrl.production)}',
+          current_mode = '${escapeSql(updatedBlogCreationUrl.mode)}',
+          method = '${escapeSql(updatedBlogCreationUrl.method)}'
+        WHERE id = '${escapeSql(get().configId || '')}' AND type = 'blog_creation'
+      `;
+      
+      const { error } = await runQuery(updateSql);
 
       if (error) {
         console.error('Error updating blog creation URL:', error);
@@ -279,16 +282,18 @@ export const useWebhookStore = create<WebhookState>()((set, get) => ({
     }
     
     try {
-      // Update Supabase
-      const { error } = await supabase
-        .from('webhook_configs')
-        .update({
-          blog_social_test_url: updatedBlogSocialShareUrl.test,
-          blog_social_prod_url: updatedBlogSocialShareUrl.production,
-          blog_social_mode: updatedBlogSocialShareUrl.mode,
-          blog_social_method: updatedBlogSocialShareUrl.method
-        })
-        .eq('id', get().configId);
+      // Update Supabase using the correct field names
+      const updateSql = `
+        UPDATE webhook_configs
+        SET 
+          test_url = '${escapeSql(updatedBlogSocialShareUrl.test)}',
+          production_url = '${escapeSql(updatedBlogSocialShareUrl.production)}',
+          current_mode = '${escapeSql(updatedBlogSocialShareUrl.mode)}',
+          method = '${escapeSql(updatedBlogSocialShareUrl.method)}'
+        WHERE id = '${escapeSql(get().configId || '')}' AND type = 'blog_social'
+      `;
+      
+      const { error } = await runQuery(updateSql);
 
       if (error) {
         console.error('Error updating blog social share URL:', error);
@@ -314,15 +319,53 @@ export const useWebhookStore = create<WebhookState>()((set, get) => ({
     }
     
     try {
-      // Update Supabase
-      const { error } = await supabase
-        .from('webhook_configs')
-        .update({ website_domain: domain })
-        .eq('id', get().configId);
-
-      if (error) {
-        console.error('Error updating website domain:', error);
-        toast.error('Failed to save domain setting to database');
+      // Create a special metadata entry for the website domain
+      const checkSql = `
+        SELECT * FROM webhook_configs 
+        WHERE type = 'website_domain'
+        LIMIT 1
+      `;
+      
+      const { data, error: checkError } = await runQuery(checkSql);
+      
+      if (checkError) {
+        console.error('Error checking for domain config:', checkError);
+      }
+      
+      if (data && data.length > 0) {
+        // Update existing domain entry
+        const updateSql = `
+          UPDATE webhook_configs
+          SET 
+            production_url = '${escapeSql(domain)}'
+          WHERE type = 'website_domain'
+        `;
+        
+        const { error } = await runQuery(updateSql);
+        if (error) {
+          console.error('Error updating website domain:', error);
+          toast.error('Failed to save domain setting to database');
+        }
+      } else {
+        // Create new domain entry
+        const insertSql = `
+          INSERT INTO webhook_configs (
+            name,
+            type,
+            production_url
+          )
+          VALUES (
+            'Website Domain',
+            'website_domain',
+            '${escapeSql(domain)}'
+          )
+        `;
+        
+        const { error } = await runQuery(insertSql);
+        if (error) {
+          console.error('Error creating website domain entry:', error);
+          toast.error('Failed to save domain setting to database');
+        }
       }
     } catch (error) {
       console.error('Unexpected error updating website domain:', error);
