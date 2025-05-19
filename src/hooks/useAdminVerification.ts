@@ -4,6 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { castRelation, ensureUserRole } from '@/utils/supabaseHelpers';
+import { User } from '@/types/user';
+import { execSql } from '@/utils/supabaseHelpers';
 
 interface AdminVerificationResult {
   isAdmin: boolean;
@@ -42,13 +44,12 @@ export const useAdminVerification = (): AdminVerificationResult => {
         }
 
         // Check if the user has the admin role in the database
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        const { data, error } = await execSql<User>(
+          supabase,
+          `SELECT id, email, role FROM users WHERE id = '${user.id}'`
+        );
 
-        if (error) {
+        if (error || !data || data.length === 0) {
           console.error('Error checking admin status:', error);
           setErrorMessage('Failed to verify admin permissions');
           setIsAdmin(false);
@@ -56,7 +57,7 @@ export const useAdminVerification = (): AdminVerificationResult => {
         }
 
         // Process the user data to ensure role is available
-        const processedUser = ensureUserRole(data);
+        const processedUser = ensureUserRole(data[0]);
         const userRole = processedUser ? processedUser.role || 'client' : 'client';
         
         if (userRole === 'admin') {

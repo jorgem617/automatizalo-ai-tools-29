@@ -12,6 +12,7 @@ import UserManagementHeader from '@/components/admin/users/UserManagementHeader'
 import EmptyUserState from '@/components/admin/users/EmptyUserState';
 import { useUserSyncService } from '@/components/admin/users/UserSyncService';
 import { execSql } from '@/utils/supabaseHelpers';
+import { ensureUserRole } from '@/utils/supabaseHelpers';
 
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -47,21 +48,15 @@ const UserManagement = () => {
           toast.error('Failed to load users');
         } else if (directData) {
           console.log('Users loaded via direct query:', directData.length);
-          // Add default role if missing
-          const usersWithRoles = directData.map(u => ({
-            ...u,
-            role: u.role || 'client'
-          }));
-          setUsers(usersWithRoles as User[]);
+          // Process each user to ensure they have a role
+          const processedUsers = directData.map(u => ensureUserRole(u));
+          setUsers(processedUsers as User[]);
         }
       } else {
         console.log('Users loaded via SQL:', sqlData.length);
-        // Add default role if missing
-        const usersWithRoles = sqlData.map(u => ({
-          ...u,
-          role: u.role || 'client'
-        }));
-        setUsers(usersWithRoles as User[]);
+        // Process each user to ensure they have a role
+        const processedUsers = sqlData.map(u => ensureUserRole(u));
+        setUsers(processedUsers as User[]);
       }
     } catch (error) {
       console.error('Unexpected error fetching users:', error);

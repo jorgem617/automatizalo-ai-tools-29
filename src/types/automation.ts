@@ -1,4 +1,5 @@
 
+
 export interface Automation {
   id: string;
   title: string;
@@ -39,7 +40,7 @@ export interface SupportTicket {
   updated_at: string;
 }
 
-// Add new interface for newsletter subscriptions for type safety
+// Add interface for newsletter subscriptions
 export interface NewsletterSubscription {
   id: string;
   email: string;
@@ -47,3 +48,26 @@ export interface NewsletterSubscription {
   created_at: string;
   updated_at?: string;
 }
+
+// Add interface for ticket responses
+export interface TicketResponse {
+  id: string;
+  ticket_id: string;
+  message: string;
+  created_by: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+// Add interface for integrations
+export interface Integration {
+  id?: string;
+  automation_id: string;
+  integration_type: 'webhook' | 'form' | 'table';
+  test_url?: string;
+  production_url?: string;
+  integration_code?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+

@@ -1,236 +1,157 @@
-import { supabase } from "@/integrations/supabase/client";
-import { BlogPost, BlogTranslation } from "@/types/blog";
-import { transformDatabasePost } from "./utils";
+import { BlogPost } from '@/types/blog';
+import { supabase } from '@/integrations/supabase/client';
+import { runQuery, escapeSql } from '@/components/admin/adminActions';
+import { safeCastArray } from '@/utils/supabaseHelpers';
 
 /**
- * Fetch all blog posts from the database
+ * Fetch all blog posts with optional filtering
  */
-export const fetchBlogPosts = async (): Promise<BlogPost[]> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('*')
-    .order('date', { ascending: false });
-
-  if (error) {
+export const fetchBlogPosts = async (filter?: 'published' | 'draft'): Promise<BlogPost[]> => {
+  try {
+    let query = `SELECT * FROM blog_posts`;
+    
+    if (filter === 'published') {
+      query += ` WHERE status = 'published'`;
+    } else if (filter === 'draft') {
+      query += ` WHERE status = 'draft'`;
+    }
+    
+    query += ` ORDER BY created_at DESC`;
+    
+    const { data, error } = await runQuery<BlogPost>(query);
+    
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
     console.error("Error fetching blog posts:", error);
-    throw new Error(`Failed to fetch blog posts: ${error.message}`);
+    return [];
   }
-
-  // Transform database posts to BlogPost type using utility function
-  let posts = (data || []).map(post => transformDatabasePost(post));
-
-  // Fetch translations for all posts
-  for (const post of posts) {
-    const { data: translations, error: translationsError } = await supabase
-      .from('blog_translations')
-      .select('*')
-      .eq('blog_post_id', post.id);
-
-    if (translationsError) {
-      console.error(`Error fetching translations for post ${post.id}:`, translationsError);
-      continue; // Continue with other posts if there's an error with this one
-    }
-
-    if (translations && translations.length > 0) {
-      post.translations = {};
-      
-      // Group translations by language
-      translations.forEach((translation: BlogTranslation) => {
-        if (translation.language === 'fr' || translation.language === 'es') {
-          post.translations![translation.language] = {
-            title: translation.title,
-            excerpt: translation.excerpt,
-            content: translation.content
-          };
-        }
-      });
-    }
-  }
-
-  return posts;
 };
 
 /**
- * Fetch a single blog post by ID
+ * Fetch a single blog post by its ID
  */
 export const fetchBlogPostById = async (id: string): Promise<BlogPost | null> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (error) {
-    console.error(`Error fetching blog post with ID ${id}:`, error);
-    throw new Error(`Failed to fetch blog post: ${error.message}`);
-  }
-
-  if (!data) return null;
-  
-  // Transform database post to BlogPost type using utility function
-  const post = transformDatabasePost(data);
-
-  // Fetch translations for this post
-  const { data: translations, error: translationsError } = await supabase
-    .from('blog_translations')
-    .select('*')
-    .eq('blog_post_id', id);
-
-  if (translationsError) {
-    console.error(`Error fetching translations for post ${id}:`, translationsError);
-  } else if (translations && translations.length > 0) {
-    post.translations = {};
+  try {
+    const { data, error } = await runQuery<BlogPost>(
+      `SELECT * FROM blog_posts WHERE id = '${id}' LIMIT 1`
+    );
     
-    // Group translations by language
-    translations.forEach((translation: BlogTranslation) => {
-      if (translation.language === 'fr' || translation.language === 'es') {
-        console.log(`Found ${translation.language} translation: content length = ${translation.content?.length || 0}`);
-        post.translations![translation.language] = {
-          title: translation.title,
-          excerpt: translation.excerpt,
-          content: translation.content
-        };
-      }
-    });
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+    
+    return data[0];
+  } catch (error) {
+    console.error("Error fetching blog post by ID:", error);
+    return null;
   }
-
-  return post;
 };
 
 /**
- * Fetch a single blog post by slug
+ * Fetch a single blog post by its slug
  */
 export const fetchBlogPostBySlug = async (slug: string): Promise<BlogPost | null> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('*')
-    .eq('slug', slug)
-    .maybeSingle();
-
-  if (error) {
-    console.error(`Error fetching blog post with slug ${slug}:`, error);
-    throw new Error(`Failed to fetch blog post: ${error.message}`);
-  }
-
-  if (!data) return null;
-  
-  // Transform database post to BlogPost type using utility function
-  const post = transformDatabasePost(data);
-
-  // Fetch translations for this post
-  const { data: translations, error: translationsError } = await supabase
-    .from('blog_translations')
-    .select('*')
-    .eq('blog_post_id', post.id);
-
-  if (translationsError) {
-    console.error(`Error fetching translations for post ${post.id}:`, translationsError);
-  } else if (translations && translations.length > 0) {
-    post.translations = {};
+  try {
+    const { data, error } = await runQuery<BlogPost>(
+      `SELECT * FROM blog_posts WHERE slug = '${escapeSql(slug)}' LIMIT 1`
+    );
     
-    // Log translation data for debugging
-    console.log(`Found ${translations.length} translations for post ${post.id}`);
+    if (error || !data || data.length === 0) {
+      return null;
+    }
     
-    // Group translations by language
-    translations.forEach((translation: BlogTranslation) => {
-      if (translation.language === 'fr' || translation.language === 'es') {
-        console.log(`Processing ${translation.language} translation: title=${translation.title?.substring(0, 20)}..., content length=${translation.content?.length || 0}`);
-        post.translations![translation.language] = {
-          title: translation.title,
-          excerpt: translation.excerpt,
-          content: translation.content
-        };
-      }
-    });
+    return data[0];
+  } catch (error) {
+    console.error("Error fetching blog post by slug:", error);
+    return null;
   }
-
-  return post;
 };
 
 /**
- * Fetch all blog post translations for a specific post
+ * Fetch recent blog posts for features or sidebars
  */
-export const fetchBlogTranslations = async (postId: string): Promise<BlogTranslation[]> => {
-  const { data, error } = await supabase
-    .from('blog_translations')
-    .select('*')
-    .eq('blog_post_id', postId);
-
-  if (error) {
-    console.error(`Error fetching translations for post ${postId}:`, error);
-    throw new Error(`Failed to fetch blog translations: ${error.message}`);
+export const fetchRecentBlogPosts = async (limit: number = 3): Promise<BlogPost[]> => {
+  try {
+    const { data, error } = await runQuery<BlogPost>(
+      `SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT ${limit}`
+    );
+    
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching recent blog posts:", error);
+    return [];
   }
-
-  return data || [];
 };
 
 /**
- * Fetch a specific translation by post ID and language
+ * Fetch blog post translations
  */
-export const fetchBlogTranslation = async (
-  postId: string, 
-  language: string
-): Promise<BlogTranslation | null> => {
-  const { data, error } = await supabase
-    .from('blog_translations')
-    .select('*')
-    .eq('blog_post_id', postId)
-    .eq('language', language)
-    .maybeSingle();
-
-  if (error) {
-    console.error(`Error fetching ${language} translation for post ${postId}:`, error);
-    throw new Error(`Failed to fetch blog translation: ${error.message}`);
-  }
-
-  return data;
-};
-
-/**
- * Fetch featured blog posts
- */
-export const fetchFeaturedBlogPosts = async (): Promise<BlogPost[]> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('*')
-    .eq('featured', true)
-    .order('date', { ascending: false });
-
-  if (error) {
-    console.error("Error fetching featured blog posts:", error);
-    throw new Error(`Failed to fetch featured blog posts: ${error.message}`);
-  }
-
-  // Transform database posts to BlogPost type using utility function
-  let posts = (data || []).map(post => transformDatabasePost(post));
-
-  // Fetch translations for all featured posts
-  for (const post of posts) {
-    const { data: translations } = await supabase
+export const fetchBlogPostTranslations = async (blogPostId: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
       .from('blog_translations')
       .select('*')
-      .eq('blog_post_id', post.id);
-
-    if (translations && translations.length > 0) {
-      post.translations = {};
+      .eq('blog_post_id', blogPostId);
       
-      // Group translations by language
-      translations.forEach((translation: BlogTranslation) => {
-        if (translation.language === 'fr' || translation.language === 'es') {
-          post.translations![translation.language] = {
-            title: translation.title,
-            excerpt: translation.excerpt,
-            content: translation.content
-          };
-        }
-      });
-    }
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching blog post translations:", error);
+    return [];
   }
-
-  return posts;
 };
 
-// Add aliases for the blog pages that were using the old names
-export const getBlogPosts = fetchBlogPosts;
-export const getBlogPostById = fetchBlogPostById;
-export const getBlogPostBySlug = fetchBlogPostBySlug;
+/**
+ * Fetch blog posts by tag
+ */
+export const fetchBlogPostsByTag = async (tag: string): Promise<BlogPost[]> => {
+  try {
+    // Fetch all blog posts
+    const allPosts = await fetchBlogPosts();
+
+    // Filter posts that include the specified tag
+    const filteredPosts = allPosts.filter(post => post.tags && post.tags.includes(tag));
+
+    return filteredPosts;
+  } catch (error) {
+    console.error("Error fetching blog posts by tag:", error);
+    return [];
+  }
+};
+
+/**
+ * Fetch similar blog posts based on tags
+ */
+export const fetchSimilarBlogPosts = async (blogPost: BlogPost, limit: number = 3): Promise<BlogPost[]> => {
+  if (!blogPost || !blogPost.tags || blogPost.tags.length === 0) {
+    return [];
+  }
+
+  try {
+    // Fetch all blog posts
+    const allPosts = await fetchBlogPosts();
+
+    // Filter posts that have at least one tag in common, excluding the current blog post
+    const similarPosts = allPosts.filter(post =>
+      post.id !== blogPost.id && post.tags && post.tags.some(tag => blogPost.tags.includes(tag))
+    );
+
+    // Sort by the number of common tags
+    similarPosts.sort((a, b) => {
+      const commonTagsA = a.tags?.filter(tag => blogPost.tags?.includes(tag)).length || 0;
+      const commonTagsB = b.tags?.filter(tag => blogPost.tags?.includes(tag)).length || 0;
+      return commonTagsB - commonTagsA;
+    });
+
+    // Return the top 'limit' posts
+    return similarPosts.slice(0, limit);
+  } catch (error) {
+    console.error("Error fetching similar blog posts:", error);
+    return [];
+  }
+};
