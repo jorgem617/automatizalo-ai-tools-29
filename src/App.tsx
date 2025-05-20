@@ -18,7 +18,11 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const ClientPortal = lazy(() => import('./pages/ClientPortal'));
 
 /* Admin routes */
-const AdminBaseLayout = lazy(() => import('./pages/admin/layout/AdminBaseLayout'));
+// ELIMINA LA SIGUIENTE LÍNEA:
+// const AdminBaseLayout = lazy(() => import('./pages/admin/layout/AdminBaseLayout'));
+// AÑADE ESTA LÍNEA (IMPORTA EL LAYOUT QUE CONTIENE EL HEADER):
+const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
+
 const Admin = lazy(() => import('./pages/admin/Admin'));
 const AutomaticBlog = lazy(() => import('./pages/admin/AutomaticBlog'));
 const BlogAdmin = lazy(() => import('./pages/admin/BlogAdmin'));
@@ -55,16 +59,19 @@ function App() {
             <Route path="blog/:slug" element={<BlogPost />} />
             <Route path="unsubscribe" element={<Unsubscribe />} />
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
-            
+
             <Route path="client-portal" element={<ClientPortal />} />
             <Route path="client-portal/automations/:automationId" element={<ClientPortal view="details" />} />
             <Route path="client-portal/support/new" element={<ClientPortal view="new-ticket" />} />
             <Route path="client-portal/support/:ticketId" element={<ClientPortal view="ticket-detail" />} />
-            
+
             <Route path="*" element={<NotFound />} />
           </Route>
-          
-          <Route path="/admin" element={<AdminBaseLayout />}>
+
+          {/* CAMBIA LA SIGUIENTE LÍNEA: */}
+          {/* <Route path="/admin" element={<AdminBaseLayout />}> */}
+          {/* A ESTA LÍNEA (USA DIRECTAMENTE AdminLayout): */}
+          <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Admin />} />
             <Route path="blog" element={<BlogAdmin />} />
             <Route path="blog/new" element={<BlogPostForm />} />
