@@ -1,4 +1,5 @@
-import React, { memo } from 'react';
+
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, Eye, Home, LogOut } from 'lucide-react';
 import { 
@@ -171,4 +172,5 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
   );
 };
 
-export default memo(AdminHeader);
+// Export the component without using memo to prevent lazy loading issues
+export default AdminHeader;
