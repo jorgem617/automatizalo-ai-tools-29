@@ -1,4 +1,3 @@
-
 import React, { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, Eye, Home, LogOut } from 'lucide-react';
@@ -61,8 +60,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Mostrar LanguageSwitcher en la barra superior solo en modo desktop */}
           {!isMobile && <LanguageSwitcher />}
           
+          {/* Mostrar botones de acción en la barra superior solo en modo desktop */}
           {!isMobile && (
             <>
               <Button 
@@ -117,47 +118,50 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
                   </SheetClose>
                 ))}
                 
-                <div className="px-4 py-2 mt-4 border-t">
-                  <div className="mb-4">
-                    <LanguageSwitcher />
+                {/* Mostrar controles en el menú lateral solo en modo mobile */}
+                {isMobile && (
+                  <div className="px-4 py-2 mt-4 border-t">
+                    <div className="mb-4">
+                      <LanguageSwitcher />
+                    </div>
+                    
+                    <SheetClose asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={onViewAsClient}
+                        className="w-full flex items-center justify-start gap-2 mb-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        {t.viewAsClient}
+                      </Button>
+                    </SheetClose>
+                    
+                    <SheetClose asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={onHomeClick}
+                        className="w-full flex items-center justify-start gap-2 mb-2"
+                      >
+                        <Home className="h-4 w-4" />
+                        {t.home}
+                      </Button>
+                    </SheetClose>
+                    
+                    <SheetClose asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={onLogout}
+                        className="w-full flex items-center justify-start gap-2 text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {t.logout}
+                      </Button>
+                    </SheetClose>
                   </div>
-                  
-                  <SheetClose asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={onViewAsClient}
-                      className="w-full flex items-center justify-start gap-2 mb-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      {t.viewAsClient}
-                    </Button>
-                  </SheetClose>
-                  
-                  <SheetClose asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={onHomeClick}
-                      className="w-full flex items-center justify-start gap-2 mb-2"
-                    >
-                      <Home className="h-4 w-4" />
-                      {t.home}
-                    </Button>
-                  </SheetClose>
-                  
-                  <SheetClose asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={onLogout}
-                      className="w-full flex items-center justify-start gap-2 text-red-600 hover:bg-red-50"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      {t.logout}
-                    </Button>
-                  </SheetClose>
-                </div>
+                )}
               </div>
             </SheetContent>
           </Sheet>
