@@ -35,7 +35,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
   const { activeTab, adminRoutes, handleTabChange } = useAdminRouteState();
   
   const t = adminTranslations[language]?.adminHeader || {
-    adminTitle: 'Admin Panel',
+    adminTitle: 'Panel Principal',
     navigation: 'Navigation',
     viewAsClient: 'Client View',
     home: 'Home',
