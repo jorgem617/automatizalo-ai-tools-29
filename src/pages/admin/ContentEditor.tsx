@@ -2,7 +2,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/context/AuthContext";
-import AdminBaseLayout from "./layout/AdminBaseLayout";
 import ContentHeader from '@/components/admin/content/ContentHeader';
 import ContentLoading from '@/components/admin/content/ContentLoading';
 import ContentEditorTabs from '@/components/admin/content/ContentEditorTabs';
@@ -31,39 +30,29 @@ const ContentEditor = () => {
   }, [user, navigate]);
 
   if (!user) {
-    return (
-      <AdminBaseLayout title="Content Editor">
-        <ContentLoading />
-      </AdminBaseLayout>
-    );
+    return <ContentLoading />;
   }
 
   if (loading) {
-    return (
-      <AdminBaseLayout title="Content Editor">
-        <ContentLoading />
-      </AdminBaseLayout>
-    );
+    return <ContentLoading />;
   }
 
   return (
-    <AdminBaseLayout title="Content Editor">
-      <div className="container mx-auto px-0 sm:px-4">
-        <ContentHeader />
+    <div className="container mx-auto px-0 sm:px-4">
+      <ContentHeader />
 
-        <ContentEditorTabs
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          pageSections={pageSections}
-          content={content}
-          images={images}
-          handleContentUpdate={handleContentUpdate}
-          handleSaveContent={handleSaveContent}
-          uploadingImage={uploadingImage}
-          setUploadingImage={setUploadingImage}
-        />
-      </div>
-    </AdminBaseLayout>
+      <ContentEditorTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        pageSections={pageSections}
+        content={content}
+        images={images}
+        handleContentUpdate={handleContentUpdate}
+        handleSaveContent={handleSaveContent}
+        uploadingImage={uploadingImage}
+        setUploadingImage={setUploadingImage}
+      />
+    </div>
   );
 };
 

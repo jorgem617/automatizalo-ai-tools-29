@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAdminVerification } from '@/hooks/useAdminVerification';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   ClientAutomationWithDetails,
@@ -12,7 +12,6 @@ import ClientAutomationsList from '@/components/admin/automations/ClientAutomati
 import ClientIntegrationForm from '@/components/admin/automations/ClientIntegrationForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AdminContent from '@/components/layout/admin/AdminContent';
-import AdminBaseLayout from './layout/AdminBaseLayout';
 
 const ClientAutomationsManager: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -61,46 +60,40 @@ const ClientAutomationsManager: React.FC = () => {
 
   if (isVerifying) {
     return (
-      <AdminBaseLayout title="Client Automations">
-        <div className="flex justify-center items-center h-64">
-          <div className="flex flex-col items-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="mt-2 text-gray-600">Verifying admin permissions...</p>
-          </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="mt-2 text-gray-600">Verifying admin permissions...</p>
         </div>
-      </AdminBaseLayout>
+      </div>
     );
   }
   
   if (!isAdmin) {
     return (
-      <AdminBaseLayout title="Client Automations">
-        <div className="text-center">
-          <p className="text-red-500 mb-2 font-semibold">Access denied</p>
-          <p className="text-gray-600">You don't have permission to access this section.</p>
-        </div>
-      </AdminBaseLayout>
+      <div className="text-center">
+        <p className="text-red-500 mb-2 font-semibold">Access denied</p>
+        <p className="text-gray-600">You don't have permission to access this section.</p>
+      </div>
     );
   }
 
   return (
-    <AdminBaseLayout title="Client Automations">
-      <AdminContent>
-        {selectedAutomation ? (
-          <ClientIntegrationForm 
-            clientAutomation={selectedAutomation}
-            onBack={handleBack}
-            onConfigUpdate={fetchData}
-          />
-        ) : (
-          <ClientAutomationsList 
-            clientAutomations={clientAutomations}
-            isLoading={isLoading}
-            onViewConfig={handleViewConfig}
-          />
-        )}
-      </AdminContent>
-    </AdminBaseLayout>
+    <AdminContent>
+      {selectedAutomation ? (
+        <ClientIntegrationForm 
+          clientAutomation={selectedAutomation}
+          onBack={handleBack}
+          onConfigUpdate={fetchData}
+        />
+      ) : (
+        <ClientAutomationsList 
+          clientAutomations={clientAutomations}
+          isLoading={isLoading}
+          onViewConfig={handleViewConfig}
+        />
+      )}
+    </AdminContent>
   );
 };
 

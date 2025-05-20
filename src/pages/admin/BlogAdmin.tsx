@@ -6,7 +6,6 @@ import BlogAdminHeader from "@/components/admin/blog/BlogAdminHeader";
 import MobilePostCard from "@/components/admin/blog/MobilePostCard";
 import BlogPostsTable from "@/components/admin/blog/BlogPostsTable";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
-import AdminBaseLayout from "./layout/AdminBaseLayout";
 
 const BlogAdmin = () => {
   const { isAuthenticated } = useAuth();
@@ -42,16 +41,14 @@ const BlogAdmin = () => {
 
   if (loading) {
     return (
-      <AdminBaseLayout title="Blog Management" hideTitle={true}>
-        <div className="flex justify-center items-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-        </div>
-      </AdminBaseLayout>
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
     );
   }
 
   return (
-    <AdminBaseLayout title="Blog Management" hideTitle={true}>
+    <>
       <BlogAdminHeader
         onCreatePost={handleCreate}
         onCreateAutomatic={handleCreateAutomatic}
@@ -90,7 +87,7 @@ const BlogAdmin = () => {
           </div>
         </div>
       )}
-    </AdminBaseLayout>
+    </>
   );
 };
 
