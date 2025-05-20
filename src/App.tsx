@@ -3,7 +3,6 @@ import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Layout from './components/layout/Layout';
 
-/* Public routes - keep lazy loading these */
 const Index = lazy(() => import('./pages/Index'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Login = lazy(() => import('./pages/Login'));
@@ -14,13 +13,8 @@ const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-/* Client portal routes */
 const ClientPortal = lazy(() => import('./pages/ClientPortal'));
 
-/* Admin routes */
-// ELIMINA LA SIGUIENTE LÍNEA:
-// const AdminBaseLayout = lazy(() => import('./pages/admin/layout/AdminBaseLayout'));
-// AÑADE ESTA LÍNEA (IMPORTA EL LAYOUT QUE CONTIENE EL HEADER):
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
 
 const Admin = lazy(() => import('./pages/admin/Admin'));
@@ -39,7 +33,6 @@ const WebhookManager = lazy(() => import('./pages/admin/WebhookManager'));
 const AutomationManager = lazy(() => import('./pages/admin/AutomationManager'));
 const ClientAutomationsManager = lazy(() => import('./pages/admin/ClientAutomationsManager'));
 
-// Initialize database tables when the app starts
 import initDatabaseTables from "./services/initDatabase";
 initDatabaseTables().catch(error => {
   console.error("Failed to initialize database tables:", error);
@@ -68,20 +61,17 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
 
-          {/* CAMBIA LA SIGUIENTE LÍNEA: */}
-          {/* <Route path="/admin" element={<AdminBaseLayout />}> */}
-          {/* A ESTA LÍNEA (USA DIRECTAMENTE AdminLayout): */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Admin />} />
             <Route path="blog" element={<BlogAdmin />} />
             <Route path="blog/new" element={<BlogPostForm />} />
             <Route path="blog/edit/:id" element={<BlogPostForm />} />
-            <Route path="automatic-blog" element={<AutomaticBlog />} /> {/* Fixed route */}
+            <Route path="automatic-blog" element={<AutomaticBlog />} />
             <Route path="content" element={<ContentManager />} />
             <Route path="content/:page" element={<ContentEditor />} />
             <Route path="layout" element={<LayoutManager />} />
             <Route path="newsletters" element={<NewsletterAdmin />} />
-            <Route path="newsletter" element={<NewsletterAdmin />} /> {/* Keep both paths for backward compatibility */}
+            <Route path="newsletter" element={<NewsletterAdmin />} />
             <Route path="notifications" element={<NotificationAdmin />} />
             <Route path="support" element={<SupportManager />} />
             <Route path="testimonials" element={<TestimonialManager />} />
