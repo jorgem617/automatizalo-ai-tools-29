@@ -62,6 +62,7 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
 
+          {/* Fix: Properly nesting the admin routes as children of AdminLayout */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Admin />} />
             <Route path="blog" element={<BlogAdmin />} />
