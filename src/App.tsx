@@ -1,6 +1,6 @@
 
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Layout from './components/layout/Layout';
 
@@ -63,7 +63,7 @@ function App() {
           </Route>
 
           {/* Fix: Properly nesting the admin routes as children of AdminLayout */}
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin" element={<AdminLayout children={<Outlet />} />}>
             <Route index element={<Admin />} />
             <Route path="blog" element={<BlogAdmin />} />
             <Route path="blog/new" element={<BlogPostForm />} />
