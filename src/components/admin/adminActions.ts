@@ -29,7 +29,45 @@ export const updateDatabaseSchema = async () => {
 
 // Helper function to run a raw SQL query for tables not in TypeScript types
 export const runQuery = async <T = any>(query: string): Promise<{ data: T[] | null; error: any }> => {
-  return execSql<T>(supabase, query);
+  try {
+    return await execSql<T>(supabase, query);
+  } catch (err) {
+    console.error("Error executing SQL query:", err);
+    
+    // Check if the error is about missing exec_sql function
+    if (err.message && err.message.includes("Could not find the function public.exec_sql")) {
+      // Show a helpful toast with instructions
+      toast.error(
+        "Database function 'exec_sql' is missing. Please run the SQL in the Supabase SQL editor to create this function.",
+        {
+          duration: 8000,
+          action: {
+            label: "View SQL",
+            onClick: () => {
+              // Output SQL to console and show alert
+              console.info(`
+CREATE OR REPLACE FUNCTION public.exec_sql(sql_query TEXT) RETURNS JSONB AS $$
+DECLARE
+  result JSONB;
+BEGIN
+  EXECUTE sql_query;
+  GET DIAGNOSTICS result = ROW_COUNT;
+  RETURN jsonb_build_object('affected_rows', result);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('error', SQLERRM);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;`);
+              alert("The SQL has been output to the console. Please copy it and run it in the Supabase SQL editor.");
+            }
+          }
+        }
+      );
+    } else {
+      toast.error("Error executing SQL query: " + (err.message || "Unknown error"));
+    }
+    
+    return { data: null, error: err };
+  }
 };
 
 // Helper function for webhook validation

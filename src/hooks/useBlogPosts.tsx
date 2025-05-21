@@ -43,7 +43,10 @@ export const useBlogPosts = () => {
         const errorMessage = handleSupabaseError(error, "Failed to load blog posts");
         setError(errorMessage);
         
-        if (error?.message?.includes('network') || 
+        // Check specifically for exec_sql missing error
+        if (error?.message?.includes('Could not find the function public.exec_sql')) {
+          setError("Could not find the function public.exec_sql(query_text) in the schema cache");
+        } else if (error?.message?.includes('network') || 
             error?.code === 'NETWORK_ERROR' || 
             error?.message?.includes('fetch') ||
             error?.code === '42501') {
