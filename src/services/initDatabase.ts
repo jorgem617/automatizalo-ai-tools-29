@@ -19,8 +19,9 @@ export const ensureExecSqlFunction = async (): Promise<boolean> => {
       console.log("exec_sql function not found, creating it...");
       
       // Function doesn't exist, create it
-      const { data: createResult, error: createError } = await supabase.rpc('create_function', {
-        function_definition: `
+      const { data: createResult, error: createError } = await supabase.functions.invoke('create-function', {
+        body: {
+          function_definition: `
           CREATE OR REPLACE FUNCTION public.exec_sql(sql_query TEXT) RETURNS JSONB AS $$
           DECLARE
             result JSONB;
@@ -33,6 +34,7 @@ export const ensureExecSqlFunction = async (): Promise<boolean> => {
           END;
           $$ LANGUAGE plpgsql SECURITY DEFINER;
         `
+        }
       });
       
       if (createError) {
