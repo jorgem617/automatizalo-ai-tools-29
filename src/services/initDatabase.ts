@@ -11,8 +11,10 @@ export const ensureExecSqlFunction = async (): Promise<boolean> => {
     console.log("Checking if exec_sql function exists...");
     
     // Try to call the function to see if it exists
-    const { data, error } = await supabase.rpc('exec_sql', {
-      query_text: "SELECT 1 as test"
+    const { data, error } = await supabase.functions.invoke('exec_sql', {
+      body: {
+        query_text: "SELECT 1 as test"
+      }
     });
     
     if (error) {
